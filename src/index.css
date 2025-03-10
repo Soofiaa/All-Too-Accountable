@@ -1,0 +1,33 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background-color: #F3F4F6; /* gris claro según tu paleta */
+  color: #1F2937; /* gris oscuro */
+  min-width: 320px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  font-weight: 500;
+  color: #2563EB; /* azul medio */
+}
+a:hover {
+  color: #1E40AF; /* azul más oscuro */
+}
+
+button {
+  border-radius: 8px;
+  font-family: inherit;
+  transition: all 0.2s ease-in-out;
+}
