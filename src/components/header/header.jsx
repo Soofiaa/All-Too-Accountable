@@ -1,20 +1,30 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
+import "./header.css";
 
 export default function Header() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    navigate("/iniciar_sesion");
+  };
+
   return (
-    <header className="bg-white border-b border-gray-300 p-4 flex items-center justify-between shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-600 font-semibold">
-          LOGO
+    <header className="header-bar">
+      <div className="header-content">
+        <div className="header-logo-title">
+          <div className="logo-circle">LOGO</div>
+          <h1 className="header-title">All Too Accountable</h1>
         </div>
-        <h1 className="text-lg font-semibold text-gray-800">All Too Accountable</h1>
+        <nav className="header-nav">
+          <button className="nav-button">Inicio</button>
+          <button className="nav-button">Transacciones</button>
+          <button className="nav-button">Gastos mensuales</button>
+          <button className="nav-button logout-button" onClick={handleLogout}>
+            Cerrar sesión
+          </button>
+        </nav>
       </div>
-      <nav className="flex items-center gap-2">
-        <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-100 transition">Inicio</button>
-        <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-100 transition">Transacciones</button>
-        <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-100 transition">Gastos mensuales</button>
-        <button className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-100 transition ml-4">Cerrar sesión</button>
-      </nav>
     </header>
   );
 }

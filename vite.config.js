@@ -1,7 +1,23 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import nodePolyfills from 'rollup-plugin-node-polyfills';
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-})
+  plugins: [],
+  resolve: {
+    alias: {
+      crypto: 'rollup-plugin-node-polyfills/polyfills/crypto-browserify.js'
+    },
+  },
+  define: {
+    'process.env': {},
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['crypto', 'uuid'],
+  },
+  build: {
+    rollupOptions: {
+      plugins: [nodePolyfills()],
+    },
+  },
+});

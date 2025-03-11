@@ -1,0 +1,76 @@
+.header-bar {
+    width: 100%;
+    background-color: #ffffff;
+    border-bottom: 1px solid #d1d5db;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  .header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+  }
+  
+  .header-logo-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .logo-circle {
+    width: 40px;
+    height: 40px;
+    background-color: #e5e7eb;
+    color: #4b5563;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .header-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e3a8a;
+    letter-spacing: 0.5px;
+  }
+  
+  .header-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* Más espacio entre los botones */
+  }
+  
+  .nav-button {
+    padding: 0.6rem 1.2rem;  /* Botón más grande y cómodo */
+    font-size: 0.9rem; /* Letra más legible */
+    color: #374151;
+    background-color: #f3f4f6; /* Color más suave */
+    border: 1px solid #d1d5db;
+    border-radius: 8px; /* Bordes más redondeados */
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .nav-button:hover {
+    background-color: #e5e7eb;
+    transform: scale(1.05); /* Efecto sutil al pasar el mouse */
+  }
+  
+  .logout-button {
+    color: #ef4444;
+    border-color: #ef4444;
+    font-weight: 600;
+  }
+  
+  .logout-button:hover {
+    background-color: #fee2e2;
+    transform: scale(1.05);
+  }
+  

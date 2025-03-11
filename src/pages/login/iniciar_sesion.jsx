@@ -1,12 +1,35 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import './iniciar_sesion.css';
+import FooterPrelogin from "../../components/footer-prelogin/footer2";
+import HeaderPrelogin from "../../components/header-prelogin/header2";
 
 export default function IniciarSesion() {
+  const navigate = useNavigate();
+
+  const handleLogin = (event) => {
+    event.preventDefault();
+    // Lógica para iniciar sesión
+    console.log("Iniciar sesión");
+    navigate('/inicio');
+  };
+
+  const handleCreateAccount = () => {
+    // Lógica para crear una cuenta
+    console.log("Crear una cuenta");
+    navigate('/registrarse');
+  };
+
+  const handleForgotPassword = () => {
+    // Lógica para olvido de contraseña
+    console.log("Olvidé mi contraseña");
+    navigate('/olvide_password');
+  };
+
   return (
     <div className="main-wrapper">
       <div className="app-window">
-        {/* HEADER visual estilo ventana */}
-        <div className="header-bar">All Too Accountable</div>
+        <HeaderPrelogin/>
 
         {/* CONTENIDO CENTRAL */}
         <div className="content-area">
@@ -32,22 +55,22 @@ export default function IniciarSesion() {
           <div className="login-box">
             <div className="login-container">
               <div className="login-title">Iniciar sesión</div>
-              <form>
+              <form onSubmit={handleLogin}>
                 <label>Correo electrónico</label>
                 <input type="email" placeholder="Ingrese su correo electrónico" />
                 <label>Contraseña</label>
                 <input type="password" placeholder="Ingrese su contraseña" />
                 <button type="submit">Iniciar Sesión</button>
-                <a href="#">He olvidado mi contraseña</a>
+                <a href="#" onClick={handleForgotPassword}>He olvidado mi contraseña</a>
                 <hr />
-                <button type="button">Crear una cuenta</button>
+                <button type="button" onClick={handleCreateAccount}>Crear una cuenta</button>
               </form>
             </div>
           </div>
         </div>
 
-        {/* FOOTER estilo ventana */}
-        <div className="footer-bar">© 2025 All Too Accountable. Todos los derechos reservados.</div>
+        <FooterPrelogin/>
+
       </div>
     </div>
   );

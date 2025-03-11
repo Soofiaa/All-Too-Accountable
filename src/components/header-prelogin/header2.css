@@ -1,0 +1,19 @@
+.header-prelogin {
+  width: 100%;
+  padding: 0.5rem 1rem;              
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+}
+
+.header-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
