@@ -1,10 +1,21 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./registrarse.css";
 import FooterPrelogin from "../../components/footer-prelogin/footer2";
 import HeaderPrelogin from "../../components/header-prelogin/header2";
 
 export default function RegistroUsuario() {
   const [fechaNacimiento, setFechaNacimiento] = useState(new Date());
+  const [showPopup, setShowPopup] = useState(false);
+  const navigate = useNavigate();
+
+  const handleCreateAccount = () => {
+    setShowPopup(true);
+    setTimeout(() => {
+      setShowPopup(false);
+      navigate('/');
+    }, 3000);
+  };
 
   return (
     <div className="registro-container">
@@ -31,26 +42,32 @@ export default function RegistroUsuario() {
         <section className="registro-formulario">
           <h2 className="registro-subtitulo">Registrarse</h2>
           <form>
-            <label>*Nombre de usuario</label>
-            <input type="text" placeholder="Ingrese su nombre de usuario" />
+            <label>Nombre de usuario</label>
+            <input type="text" placeholder="Ingrese su nombre de usuario deseado, posteriormente puede cambiarlo" />
 
-            <label>*Correo electrónico</label>
+            <label>Correo electrónico</label>
             <input type="email" placeholder="Ingrese su correo electrónico" />
 
-            <label>*Contraseña</label>
+            <label>Contraseña</label>
             <input type="password" placeholder="Ingrese su contraseña" />
 
-            <label>*Re-ingrese su contraseña</label>
-            <input type="password" placeholder="Ingrese su contraseña" />
+            <label>Re-ingrese su contraseña</label>
+            <input type="password" placeholder="Re-ingrese su contraseña" />
 
-            <label>*Ingrese su fecha de nacimiento</label>
+            <label>Ingrese su fecha de nacimiento</label>
             <input type="date" value={fechaNacimiento.toISOString().substr(0, 10)} onChange={(e) => setFechaNacimiento(new Date(e.target.value))} />
 
-            <button type="submit">Crear una cuenta</button>
+            <button type="button" onClick={handleCreateAccount}>Crear una cuenta</button>
           </form>
-          <p className="registro-link">¿Tienes una cuenta? Inicia sesión</p>
+          <p className="registro-link" onClick={() => navigate('/')}>¿Tienes una cuenta? Inicia sesión</p>
         </section>
       </main>
+
+      {showPopup && (
+        <div className="popup">
+          <p>Su cuenta ha sido creada exitosamente, revise su correo electrónico</p>
+        </div>
+      )}
 
       <FooterPrelogin/>
     </div>

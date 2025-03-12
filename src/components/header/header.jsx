@@ -1,12 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./header.css";
 
 export default function Header() {
   const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    navigate("/iniciar_sesion");
+    const confirmLogout = window.confirm("¿Estás seguro de que quieres cerrar sesión?");
+    if (confirmLogout) {
+      navigate("/");
+    }
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
   };
 
   return (
@@ -16,14 +24,19 @@ export default function Header() {
           <div className="logo-circle">LOGO</div>
           <h1 className="header-title">All Too Accountable</h1>
         </div>
-        <nav className="header-nav">
-          <button className="nav-button">Inicio</button>
-          <button className="nav-button">Transacciones</button>
-          <button className="nav-button">Gastos mensuales</button>
+        <nav className={`header-nav ${isMenuOpen ? "open" : ""}`}>
+          <button className="nav-button" onClick={() => navigate("/inicio")}>Inicio</button>
+          <button className="nav-button" onClick={() => navigate("/transacciones")}>Transacciones</button>
+          <button className="nav-button" onClick={() => navigate("/ver-categorias")}>Ver categorias</button>
+          <button className="nav-button" onClick={() => navigate("/gastos-mensuales")}>Gastos mensuales</button>
+          <button className="nav-button" onClick={() => navigate("/metas-ahorro")}>Metas de ahorro</button>
           <button className="nav-button logout-button" onClick={handleLogout}>
             Cerrar sesión
           </button>
         </nav>
+        <button className="menu-button" onClick={toggleMenu}>
+          &#9776;
+        </button>
       </div>
     </header>
   );

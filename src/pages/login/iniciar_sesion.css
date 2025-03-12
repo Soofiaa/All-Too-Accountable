@@ -1,51 +1,58 @@
 body, html {
   margin: 0;
   padding: 0;
-  height: 100%;
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
   font-family: "Segoe UI", "Roboto", "Helvetica", sans-serif;
-  color: #1F2937; /* Gris oscuro */
+  color: #1F2937;
+  box-sizing: border-box;
 }
 
-/* Envoltorio general */
 .main-wrapper {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+  flex-direction: column;
+  padding-top: 80px;
+  box-sizing: border-box;
+  min-height: 100vh;
 }
 
 .app-window {
   width: 90%;
   max-width: 1200px;
-  height: 90vh;
   background-color: white;
-  border: 2px solid #D1D5DB;
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
   box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.05);
   border-radius: 12px;
+  border: 2px solid #D1D5DB;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
-/* Header */
 .header-bar {
   padding: 10px 20px;
   border-bottom: 2px solid #D1D5DB;
   font-weight: bold;
   font-size: 20px;
-  color: #2563EB; /* Azul medio */
+  color: #2563EB;
   background-color: #F3F4F6;
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 999;
 }
 
-/* Contenido principal dividido */
 .content-area {
   flex-grow: 1;
   display: flex;
 }
 
-/* Caja presentación */
 .presentation-box {
   width: 50%;
   padding: 32px;
@@ -68,7 +75,6 @@ body, html {
   color: #2563EB;
 }
 
-/* Caja login */
 .login-box {
   width: 50%;
   display: flex;
@@ -78,7 +84,6 @@ body, html {
   background-color: white;
 }
 
-/* Contenedor del formulario */
 .login-container {
   width: 100%;
   max-width: 300px;
@@ -90,7 +95,6 @@ body, html {
   box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.08);
 }
 
-/* Título login */
 .login-title {
   text-align: center;
   font-weight: 700;
@@ -101,7 +105,6 @@ body, html {
   color: #2563EB;
 }
 
-/* Campos */
 form label {
   font-size: 14px;
   margin-top: 10px;

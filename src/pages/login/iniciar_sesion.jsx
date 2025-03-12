@@ -9,7 +9,6 @@ export default function IniciarSesion() {
 
   const handleLogin = (event) => {
     event.preventDefault();
-    // Lógica para iniciar sesión
     console.log("Iniciar sesión");
     navigate('/inicio');
   };
@@ -68,9 +67,7 @@ export default function IniciarSesion() {
             </div>
           </div>
         </div>
-
         <FooterPrelogin/>
-
       </div>
     </div>
   );

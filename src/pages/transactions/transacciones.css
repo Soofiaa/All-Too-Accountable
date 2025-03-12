@@ -1,0 +1,219 @@
+.transacciones-container {
+  padding: 2rem;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f9fafb;
+  color: #333;
+}
+
+.titulo {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.botones-agregar {
+  margin-bottom: 1.5rem;
+}
+
+.btn-seleccion {
+  padding: 0.5rem 1.25rem;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #f0f4f8;
+  cursor: pointer;
+  margin-right: 1rem;
+}
+
+.btn-seleccion:hover {
+  background-color: #e2e8f0;
+}
+
+.formulario-transaccion {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.titulo-formulario {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.titulo-formulario.ingreso {
+  color: #22c55e;
+}
+
+.titulo-formulario.gasto {
+  color: #ef4444;
+}
+
+.grid-formulario {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2rem;
+  align-items: center;
+}
+
+.grid-formulario input,
+.grid-formulario select {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* Ajustes para campos de medio ancho */
+.grid-formulario .medio-ancho {
+  max-width: 180px;
+  width: 100%;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.label-fecha,
+.label-monto {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.campo-descripcion {
+  grid-column: span 2;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.adjuntar-imagen label {
+  display: inline-block;
+  border: 2px dashed #60a5fa;
+  color: #3b82f6;
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  width: 100%;
+}
+
+.adjuntar-imagen input[type="file"] {
+  display: none;
+}
+
+.acciones {
+  margin-top: 1rem;
+}
+
+.btn-guardar {
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-guardar:hover {
+  background-color: #2563eb;
+}
+
+.titulo-secundario {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.lista-transacciones {
+  list-style: none;
+  padding: 0;
+}
+
+.item-transaccion {
+  padding: 0.75rem 1rem;
+  background-color: white;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.acciones-transaccion button {
+  margin-left: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.tipo-pago-group label,
+.cuotas-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.tipo-pago-group select,
+.cuotas-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.tipo-pago-group,
+.cuotas-group,
+.grid-formulario .medio-ancho {
+  max-width: 180px;
+  width: 100%;
+}
+
+.grid-formulario > div > label,
+.tipo-pago-group > label,
+.cuotas-group > label,
+.checkbox-group > label,
+.adjuntar-imagen > label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Estilo para selector mes y año */
+input[type="month"] {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  max-width: 180px;
+}
+
+.input-imagen {
+  max-width: 150px;
+}
+

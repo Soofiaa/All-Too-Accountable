@@ -9,5 +9,6 @@
     border-top: 1px solid #d1d5db;
     text-align: right;
     box-sizing: border-box;        /* importante para que padding no expanda el ancho */
-  }
-  
+    position: fixed;              
+    bottom: 0;                     
+}
