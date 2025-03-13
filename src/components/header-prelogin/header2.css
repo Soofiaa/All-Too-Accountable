@@ -1,6 +1,13 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
 .header-prelogin {
   width: 100%;
-  padding: 0.5rem 1rem;              
+  padding: 0.25rem 1rem;              
   background-color: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
@@ -9,6 +16,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
 }
+
 
 .header-title {
   font-size: 1.25rem;

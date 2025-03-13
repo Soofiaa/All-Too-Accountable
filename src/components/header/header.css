@@ -1,6 +1,6 @@
 .header-bar {
   width: 100%;
-  position: fixed; /* Fijar el header en la parte superior */
+  position: static;
   top: 0; /* Pegado a la parte superior */
   left: 0; /* Usar el ancho completo de la pantalla */
   background-color: #ffffff;
@@ -115,10 +115,6 @@
   .menu-button {
     display: block;
   }
-}
-
-body {
-  padding-top: 80px;
 }
 
 .hidden-header {

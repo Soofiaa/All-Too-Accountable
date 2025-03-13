@@ -1,8 +1,19 @@
+.page-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.metas-ahorro-container {
+  flex: 1;
+  padding: 2rem;
+}
+
 .gastos-mensuales-container {
   font-family: 'Segoe UI', sans-serif;
   background-color: #f9fafb;
   color: #333;
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;

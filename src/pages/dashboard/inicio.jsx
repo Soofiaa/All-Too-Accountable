@@ -86,8 +86,9 @@ export default function DashboardFinanciero() {
   };
 
   return (
+    <div className="page-layout">
+    <Header />
     <div className="dashboard-container">
-      <Header />
       <main className="dashboard-main">
         <aside className="dashboard-sidebar">
           <div className="dashboard-profile">
@@ -178,6 +179,7 @@ export default function DashboardFinanciero() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

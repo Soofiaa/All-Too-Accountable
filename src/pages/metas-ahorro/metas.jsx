@@ -47,77 +47,79 @@ export default function MetasAhorro() {
   };
 
   return (
-    <div className="metas-ahorro-container">
+    <div className="page-layout">
       <Header />
+      <div className="metas-ahorro-container">
+        <div className="contenido">
+          <h2 className="titulo">Ver metas de ahorro</h2>
 
-      <div className="contenido">
-        <h2 className="titulo">Ver metas de ahorro</h2>
+          <button className="btn-agregar" onClick={() => setMostrarModal(true)}>
+            Agregar meta de ahorro
+          </button>
 
-        <button className="btn-agregar" onClick={() => setMostrarModal(true)}>
-          Agregar meta de ahorro
-        </button>
-
-        <table className="tabla-metas">
-          <thead>
-            <tr>
-              <th>Título</th>
-              <th>Fecha límite</th>
-              <th>Monto meta</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {metas.map((meta, index) => (
-              <tr key={index}>
-                <td>{meta.titulo}</td>
-                <td>{meta.fecha}</td>
-                <td>${meta.monto.toLocaleString()}</td>
-                <td className="acciones">
-                  <button className="btn-editar" onClick={() => handleEditar(index)}>Editar</button>
-                  <button className="btn-eliminar" onClick={() => handleEliminar(index)}>Eliminar</button>
-                </td>
+          <table className="tabla-metas">
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Fecha límite</th>
+                <th>Monto meta</th>
+                <th>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {metas.map((meta, index) => (
+                <tr key={index}>
+                  <td>{meta.titulo}</td>
+                  <td>{meta.fecha}</td>
+                  <td>${meta.monto.toLocaleString()}</td>
+                  <td className="acciones">
+                    <button className="btn-editar" onClick={() => handleEditar(index)}>Editar</button>
+                    <button className="btn-eliminar" onClick={() => handleEliminar(index)}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      {mostrarModal && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <h3>{modoEdicion ? "Editar meta de ahorro" : "Agregar meta de ahorro"}</h3>
-            <label>
-              Título
-              <input
-                type="text"
-                value={nuevaMeta.titulo}
-                onChange={(e) => setNuevaMeta({ ...nuevaMeta, titulo: e.target.value })}
-              />
-            </label>
-            <label>
-              Fecha límite
-              <input
-                type="date"
-                value={nuevaMeta.fecha}
-                onChange={(e) => setNuevaMeta({ ...nuevaMeta, fecha: e.target.value })}
-              />
-            </label>
-            <label>
-              Monto meta
-              <input
-                type="number"
-                value={nuevaMeta.monto}
-                onChange={(e) => setNuevaMeta({ ...nuevaMeta, monto: e.target.value })}
-              />
-            </label>
-            <div className="modal-buttons">
-              <button onClick={handleGuardar}>{modoEdicion ? "Guardar" : "Aceptar"}</button>
-              <button onClick={handleCancelar}>Cancelar</button>
+        {mostrarModal && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>{modoEdicion ? "Editar meta de ahorro" : "Agregar meta de ahorro"}</h3>
+              <label>
+                Título
+                <input
+                  type="text"
+                  value={nuevaMeta.titulo}
+                  onChange={(e) => setNuevaMeta({ ...nuevaMeta, titulo: e.target.value })}
+                />
+              </label>
+              <label>
+                Fecha límite
+                <input
+                  type="date"
+                  value={nuevaMeta.fecha}
+                  onChange={(e) => setNuevaMeta({ ...nuevaMeta, fecha: e.target.value })}
+                />
+              </label>
+              <label>
+                Monto meta
+                <input
+                  type="number"
+                  value={nuevaMeta.monto}
+                  onChange={(e) => setNuevaMeta({ ...nuevaMeta, monto: e.target.value })}
+                />
+              </label>
+              <div className="modal-buttons">
+                <button onClick={handleGuardar}>{modoEdicion ? "Guardar" : "Aceptar"}</button>
+                <button onClick={handleCancelar}>Cancelar</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
+
+      </div>
       <Footer />
     </div>
   );
