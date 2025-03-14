@@ -7,9 +7,15 @@ import HeaderPrelogin from "../../components/header-prelogin/header2";
 export default function RegistroUsuario() {
   const [fechaNacimiento, setFechaNacimiento] = useState(new Date());
   const [showPopup, setShowPopup] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
   const handleCreateAccount = () => {
+    if (password !== confirmPassword) {
+      alert("Las contraseñas no coinciden. Por favor, verifica e intenta nuevamente.");
+      return;
+    }
     setShowPopup(true);
     setTimeout(() => {
       setShowPopup(false);
@@ -49,10 +55,10 @@ export default function RegistroUsuario() {
             <input type="email" placeholder="Ingrese su correo electrónico" required />
 
             <label className="required">Contraseña</label>
-            <input type="password" placeholder="Ingrese su contraseña" required />
+            <input type="password" placeholder="Ingrese su contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required />
 
             <label className="required">Re-ingrese su contraseña</label>
-            <input type="password" placeholder="Re-ingrese su contraseña" required />
+            <input type="password" placeholder="Re-ingrese su contraseña" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
 
             <label className="required">Ingrese su fecha de nacimiento</label>
             <input type="date" value={fechaNacimiento.toISOString().substr(0, 10)} onChange={(e) => setFechaNacimiento(new Date(e.target.value))} required />
