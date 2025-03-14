@@ -42,20 +42,20 @@ export default function RegistroUsuario() {
         <section className="registro-formulario">
           <h2 className="registro-subtitulo">Registrarse</h2>
           <form>
-            <label>Nombre de usuario</label>
-            <input type="text" placeholder="Ingrese su nombre de usuario deseado, posteriormente puede cambiarlo" />
+            <label className="required">Nombre de usuario</label>
+            <input type="text" placeholder="Ingrese su nombre de usuario deseado, posteriormente puede cambiarlo" required />
 
-            <label>Correo electrónico</label>
-            <input type="email" placeholder="Ingrese su correo electrónico" />
+            <label className="required">Correo electrónico</label>
+            <input type="email" placeholder="Ingrese su correo electrónico" required />
 
-            <label>Contraseña</label>
-            <input type="password" placeholder="Ingrese su contraseña" />
+            <label className="required">Contraseña</label>
+            <input type="password" placeholder="Ingrese su contraseña" required />
 
-            <label>Re-ingrese su contraseña</label>
-            <input type="password" placeholder="Re-ingrese su contraseña" />
+            <label className="required">Re-ingrese su contraseña</label>
+            <input type="password" placeholder="Re-ingrese su contraseña" required />
 
-            <label>Ingrese su fecha de nacimiento</label>
-            <input type="date" value={fechaNacimiento.toISOString().substr(0, 10)} onChange={(e) => setFechaNacimiento(new Date(e.target.value))} />
+            <label className="required">Ingrese su fecha de nacimiento</label>
+            <input type="date" value={fechaNacimiento.toISOString().substr(0, 10)} onChange={(e) => setFechaNacimiento(new Date(e.target.value))} required />
 
             <button type="button" onClick={handleCreateAccount}>Crear una cuenta</button>
           </form>
