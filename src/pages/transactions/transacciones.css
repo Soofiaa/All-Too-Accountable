@@ -33,13 +33,12 @@
   color: #111827;
 }
 
-.campo-imagen{
+.campo-imagen {
   max-width: 80%;
 }
 
 .campo-monto input {
-  /*hacerlo mas angosto*/
-max-width: 150px;
+  max-width: 150px;
 }
 
 input,
@@ -61,11 +60,11 @@ select {
   cursor: pointer;
   margin-right: 1rem;
   margin-bottom: 1rem;
-  
 }
 
 .btn-seleccion:hover {
   background-color: #10b981;
+  color: white;
 }
 
 .formulario-transaccion {
@@ -120,16 +119,12 @@ select {
   margin-bottom: 0.75rem;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .acciones-transaccion button {
-  margin-left: 0.5rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .page-layout {
@@ -142,14 +137,116 @@ footer {
   margin-top: auto;
 }
 
-.campo-repetido {
+.resumen-transaccion.solo-texto .info-columna {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  padding: 0.5rem 0;
+}
+
+.btn-editar,
+.btn-eliminar {
+  padding: 0.4rem 1rem;
+  border: 2px solid;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-editar {
+  background-color: white;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.btn-eliminar {
+  background-color: white;
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.btn-eliminar:hover {
+  background-color: #ef4444;
+  color: white;
+}
+
+.acciones-transaccion {
+  display: flex;
+  justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 0.25rem;
-  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.modal-content h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
   color: #111827;
-  flex-direction: row;
-  justify-content: flex-start;
-  
+}
+
+.modal-content .grid-formulario {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.modal-content .grid-formulario input,
+.modal-content .grid-formulario select {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+.modal-content .acciones-transaccion {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn-cerrar {
+  background-color: #f3f4f6;
+  color: #333;
+  padding: 0.5rem 1.2rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-cerrar:hover {
+  background-color: #e5e7eb;
+}
+
+label.required::after {
+  content: " *";
+  color: red;
+  font-weight: bold;
 }
