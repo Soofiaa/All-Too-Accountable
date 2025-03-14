@@ -26,8 +26,8 @@ export default function Transacciones() {
     mesPago: getMesActual(),
     imagen: null,
     tipoPago: "efectivo",
-    cuotas: "",
-    interes: "",
+    cuotas: "1",
+    interes: "0",
     totalCredito: "",
     valorCuota: ""
   });
@@ -40,14 +40,9 @@ export default function Transacciones() {
 
   useEffect(() => {
     const rawMonto = parseFloat(nuevaTransaccion.monto.replace(/\./g, ""));
-    if (
-      nuevaTransaccion.tipoPago === "credito" &&
-      rawMonto &&
-      nuevaTransaccion.cuotas &&
-      nuevaTransaccion.interes
-    ) {
-      const cuotas = parseInt(nuevaTransaccion.cuotas);
-      const interes = parseFloat(nuevaTransaccion.interes);
+    const cuotas = parseInt(nuevaTransaccion.cuotas) || 1;
+    const interes = parseFloat(nuevaTransaccion.interes) || 0;
+    if (nuevaTransaccion.tipoPago === "credito" && rawMonto) {
       const total = rawMonto * Math.pow(1 + interes / 100, cuotas);
       const valorCuota = total / cuotas;
       setNuevaTransaccion((prev) => ({
@@ -56,7 +51,7 @@ export default function Transacciones() {
         valorCuota: valorCuota.toFixed(2)
       }));
     }
-  }, [nuevaTransaccion.monto, nuevaTransaccion.cuotas, nuevaTransaccion.interes]);
+  }, [nuevaTransaccion.monto, nuevaTransaccion.cuotas, nuevaTransaccion.interes, nuevaTransaccion.tipoPago]);
 
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -89,8 +84,8 @@ export default function Transacciones() {
       mesPago: getMesActual(),
       imagen: null,
       tipoPago: "efectivo",
-      cuotas: "",
-      interes: "",
+      cuotas: "1",
+      interes: "0",
       totalCredito: "",
       valorCuota: ""
     });
@@ -166,6 +161,30 @@ export default function Transacciones() {
                 <input type="file" ref={fileInputRef} name="imagen" onChange={handleChange} />
               </label>
             </div>
+
+            {nuevaTransaccion.tipoPago === "credito" && (
+              <>
+                <div className="campo-cuotas">
+                  <label>Número de cuotas</label>
+                  <input type="number" name="cuotas" value={nuevaTransaccion.cuotas} onChange={handleChange} min="1" />
+                </div>
+
+                <div className="campo-interes">
+                  <label>Interés (%)</label>
+                  <input type="number" name="interes" value={nuevaTransaccion.interes} onChange={handleChange} step="0.1" min="0" />
+                </div>
+
+                <div className="campo-valor-cuota">
+                  <label>Valor estimado de cuota</label>
+                  <input type="text" value={nuevaTransaccion.valorCuota} disabled />
+                </div>
+
+                <div className="campo-total-credito">
+                  <label>Total estimado a pagar</label>
+                  <input type="text" value={nuevaTransaccion.totalCredito} disabled />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="acciones">
@@ -178,6 +197,9 @@ export default function Transacciones() {
           {transacciones.map((t, index) => (
             <li key={index} className="item-transaccion">
               <strong>{t.tipo.toUpperCase()}</strong>: {t.fecha} - ${t.monto} - {t.categoria} - {t.descripcion} - {t.tipoPago}
+              {t.tipoPago === "credito" && (
+                <span> - {t.cuotas} cuotas - Total estimado: ${t.totalCredito}</span>
+              )}
               <div className="acciones-transaccion">
                 <button onClick={() => editarTransaccion(index)}>✏️</button>
                 <button onClick={() => eliminarTransaccion(index)}>🗑️</button>
