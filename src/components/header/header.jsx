@@ -9,9 +9,10 @@ export default function Header() {
   const handleLogout = () => {
     const confirmLogout = window.confirm("¿Estás seguro de que quieres cerrar sesión?");
     if (confirmLogout) {
+      localStorage.removeItem("usuario"); // BORRA los datos del usuario
       navigate("/");
     }
-  };
+  };  
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);

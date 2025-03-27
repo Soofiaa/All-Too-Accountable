@@ -1,4 +1,5 @@
 import React from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import './iniciar_sesion.css';
 import FooterPrelogin from "../../components/footer-prelogin/footer2";
@@ -7,11 +8,49 @@ import HeaderPrelogin from "../../components/header-prelogin/header2";
 export default function IniciarSesion() {
   const navigate = useNavigate();
 
-  const handleLogin = (event) => {
+  useEffect(() => {
+    const usuario = localStorage.getItem("usuario");
+    if (usuario) {
+      navigate("/inicio");
+    }
+  }, []);
+
+  const handleLogin = async (event) => {
     event.preventDefault();
-    console.log("Iniciar sesión");
-    navigate('/inicio');
-  };
+  
+    const email = event.target.email.value.trim();
+    const password = event.target.password.value.trim();
+  
+    if (!email || !password) {
+      alert("Por favor ingresa ambos campos");
+      return;
+    }
+  
+    try {
+      const response = await fetch('http://localhost:5000/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok && data.success) {
+        console.log("Inicio de sesión exitoso");
+        // Guarda los datos del usuario en localStorage
+        localStorage.setItem("usuario", JSON.stringify(data.usuario));
+        navigate('/inicio');
+      } else {
+        alert(data.message || 'Credenciales incorrectas');
+      }
+  
+    } catch (error) {
+      console.error('Error al conectar con el servidor:', error);
+      alert('No se pudo conectar con el servidor. Intenta más tarde.');
+    }
+  };  
 
   const handleCreateAccount = () => {
     // Lógica para crear una cuenta
@@ -56,9 +95,9 @@ export default function IniciarSesion() {
               <div className="login-title">Iniciar sesión</div>
               <form onSubmit={handleLogin}>
                 <label>Correo electrónico</label>
-                <input type="email" placeholder="Ingrese su correo electrónico" />
+                <input type="email" name="email" placeholder="Ingrese su correo electrónico" required />
                 <label>Contraseña</label>
-                <input type="password" placeholder="Ingrese su contraseña" />
+                <input type="password" name="password" placeholder="Ingrese su contraseña" required />
                 <button type="submit">Iniciar Sesión</button>
                 <a href="#" onClick={handleForgotPassword}>He olvidado mi contraseña</a>
                 <hr />
