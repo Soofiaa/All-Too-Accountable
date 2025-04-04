@@ -14,6 +14,7 @@ export default function Transacciones() {
   const [showModal, setShowModal] = useState(null);
   const [camposInvalidos, setCamposInvalidos] = useState([]);
   const [transaccionEditada, setTransaccionEditada] = useState(null);
+  const [eliminadas, setEliminadas] = useState([]);
 
   const getMesActual = () => {
     const now = new Date();
@@ -148,9 +149,17 @@ export default function Transacciones() {
   };
 
   const eliminarTransaccion = (index) => {
+    const transaccionEliminada = transacciones[index];
     const actualizadas = transacciones.filter((_, i) => i !== index);
     setTransacciones(actualizadas);
+    setEliminadas([...eliminadas, transaccionEliminada]);
   };
+  
+  const restaurarTransaccion = (index) => {
+    const transaccionRestaurada = eliminadas[index];
+    setTransacciones([...transacciones, transaccionRestaurada]);
+    setEliminadas(eliminadas.filter((_, i) => i !== index));
+  };  
 
   const editarTransaccion = (index) => {
     setTransaccionEditada(transacciones[index]);
@@ -326,6 +335,26 @@ export default function Transacciones() {
             <div className="acciones-transaccion">
             <button className="btn-editar" onClick={() => { editarTransaccion(index); setShowModal(index); }}>Editar</button>
             <button className="btn-eliminar" onClick={() => eliminarTransaccion(index)}>Eliminar</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      
+      // Historial de transacciones eliminadas
+      <h3 className="titulo-secundario">Transacciones eliminadas</h3>
+      <ul className="lista-transacciones historial-eliminadas">
+        {eliminadas.map((t, index) => (
+          <li key={index} className="item-transaccion">
+            <div className="resumen-transaccion solo-texto">
+              <div className="info-columna">
+                <div><strong>Tipo:</strong><br /> {t.tipo.toUpperCase()}</div>
+                <div><strong>Fecha:</strong><br /> {t.fecha}</div>
+                <div><strong>Descripción:</strong><br /> {t.descripcion}</div>
+                <div><strong>Tipo de pago:</strong><br /> {t.tipoPago}</div>
+              </div>
+            </div>
+            <div className="acciones-transaccion">
+              <button className="btn-restaurar" onClick={() => restaurarTransaccion(index)}>Restaurar</button>
             </div>
           </li>
         ))}

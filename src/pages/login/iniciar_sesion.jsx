@@ -15,40 +15,33 @@ export default function IniciarSesion() {
     }
   }, []);
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
-  
-    const email = event.target.email.value.trim();
-    const password = event.target.password.value.trim();
-  
-    if (!email || !password) {
-      alert("Por favor ingresa ambos campos");
-      return;
-    }
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
   
     try {
       const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
       });
   
-      const data = await response.json();
+      const result = await response.json();
   
-      if (response.ok && data.success) {
-        console.log("Inicio de sesión exitoso");
-        // Guarda los datos del usuario en localStorage
-        localStorage.setItem("usuario", JSON.stringify(data.usuario));
-        navigate('/inicio');
+      if (result.success) {
+        alert("Inicio de sesión exitoso");
+        console.log(result.usuario);
       } else {
-        alert(data.message || 'Credenciales incorrectas');
+        alert(result.message);
       }
-  
     } catch (error) {
-      console.error('Error al conectar con el servidor:', error);
-      alert('No se pudo conectar con el servidor. Intenta más tarde.');
+      alert("Error al conectar con el servidor");
+      console.error(error);
     }
   };  
 
@@ -109,5 +102,5 @@ export default function IniciarSesion() {
         <FooterPrelogin/>
       </div>
     </div>
-  );
-}
+    );
+  }
