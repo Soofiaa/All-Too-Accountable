@@ -1,12 +1,13 @@
-import React from "react";
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import './iniciar_sesion.css';
 import FooterPrelogin from "../../components/footer-prelogin/footer2";
 import HeaderPrelogin from "../../components/header-prelogin/header2";
+import React, { useEffect, useState } from "react";
 
 export default function IniciarSesion() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     const usuario = localStorage.getItem("usuario");
@@ -26,8 +27,8 @@ export default function IniciarSesion() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: email,
-          password: password,
+          correo: email,          
+          contrasena: password, 
         }),
       });
   
@@ -36,6 +37,9 @@ export default function IniciarSesion() {
       if (result.success) {
         alert("Inicio de sesión exitoso");
         console.log(result.usuario);
+        // Guarda el usuario en localStorage y redirige
+        localStorage.setItem("usuario", JSON.stringify(result.usuario));
+        navigate("/inicio");
       } else {
         alert(result.message);
       }
@@ -43,7 +47,7 @@ export default function IniciarSesion() {
       alert("Error al conectar con el servidor");
       console.error(error);
     }
-  };  
+  };    
 
   const handleCreateAccount = () => {
     // Lógica para crear una cuenta
@@ -88,9 +92,23 @@ export default function IniciarSesion() {
               <div className="login-title">Iniciar sesión</div>
               <form onSubmit={handleLogin}>
                 <label>Correo electrónico</label>
-                <input type="email" name="email" placeholder="Ingrese su correo electrónico" required />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Ingrese su correo electrónico"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
                 <label>Contraseña</label>
-                <input type="password" name="password" placeholder="Ingrese su contraseña" required />
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Ingrese su contraseña"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
                 <button type="submit">Iniciar Sesión</button>
                 <a href="#" onClick={handleForgotPassword}>He olvidado mi contraseña</a>
                 <hr />

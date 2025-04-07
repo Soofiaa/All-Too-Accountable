@@ -37,6 +37,17 @@ export default function Transacciones() {
   });
 
   useEffect(() => {
+    fetch('http://localhost:5000/transacciones')
+      .then(response => response.json())
+      .then(data => {
+        const activas = data.filter(tx => tx.visible === true);
+        const eliminadas = data.filter(tx => tx.visible === false);
+        setTransacciones(activas);
+        setHistorial(eliminadas);
+      });
+  }, []);
+  
+  useEffect(() => {
     if (!nuevaTransaccion.mesPago) {
       setNuevaTransaccion((prev) => ({ ...prev, mesPago: getMesActual() }));
     }
@@ -334,7 +345,18 @@ export default function Transacciones() {
             </div>
             <div className="acciones-transaccion">
             <button className="btn-editar" onClick={() => { editarTransaccion(index); setShowModal(index); }}>Editar</button>
-            <button className="btn-eliminar" onClick={() => eliminarTransaccion(index)}>Eliminar</button>
+            <button
+              onClick={() => {
+                fetch(`http://localhost:5000/transacciones/${tx.id}`, {
+                  method: 'DELETE',
+                }).then(() => {
+                  setTransacciones(transacciones.filter(t => t.id !== tx.id));
+                  setHistorial([...historial, { ...tx, visible: false }]);
+                });
+              }}
+            >
+              Eliminar
+            </button>
             </div>
           </li>
         ))}
@@ -354,7 +376,18 @@ export default function Transacciones() {
               </div>
             </div>
             <div className="acciones-transaccion">
-              <button className="btn-restaurar" onClick={() => restaurarTransaccion(index)}>Restaurar</button>
+            <button
+              onClick={() => {
+                fetch(`http://localhost:5000/transacciones/${tx.id}/recuperar`, {
+                  method: 'PUT',
+                }).then(() => {
+                  setHistorial(historial.filter(t => t.id !== tx.id));
+                  setTransacciones([...transacciones, { ...tx, visible: true }]);
+                });
+              }}
+            >
+              Recuperar
+            </button>
             </div>
           </li>
         ))}
