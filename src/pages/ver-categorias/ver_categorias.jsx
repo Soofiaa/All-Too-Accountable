@@ -1,23 +1,43 @@
-import React, { useState } from "react";
 import "./ver_categorias.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
+import React, { useState, useEffect } from "react";
 
+const idUsuario = localStorage.getItem("id_usuario");
+
+// 9-4-2024 - Se agrega la función Categorias para manejar la vista de categorías
 const Categorias = () => {
-  const [categorias, setCategorias] = useState([
-    { nombre: "General", tipo: "Ambos" },
-    { nombre: "Costura", tipo: "Ingreso" },
-    { nombre: "Tonteras", tipo: "Gasto" },
-  ]);
+  const [categorias, setCategorias] = useState([]);
+  useEffect(() => {
+    fetch(`http://localhost:5000/api/categorias/${idUsuario}`)
+      .then(res => res.json())
+      .then(data => {
+        const ordenadas = [...data].sort((a, b) => {
+          if (a.nombre === "General") return -1;
+          if (b.nombre === "General") return 1;
+          return 0;
+        });
+        setCategorias(ordenadas);
+      })      
+      .catch(err => console.error("Error al cargar categorías:", err));
+}, []);
 
   const [mostrarModalAgregar, setMostrarModalAgregar] = useState(false);
   const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: "", tipo: "" });
   const [categoriaEditando, setCategoriaEditando] = useState(null);
 
-  const handleEliminar = (index) => {
-    const nuevasCategorias = categorias.filter((_, idx) => idx !== index);
-    setCategorias(nuevasCategorias);
-  };
+  // 9-4-2024 - Se agrega la función handleEliminar para manejar la eliminación de categorías
+  const handleEliminar = async (index) => {
+    const id = categorias[index].id;
+    await fetch(`http://localhost:5000/api/categorias/${id}`, {
+      method: "DELETE"
+    });
+  
+    // Refresca después de eliminar
+    const res = await fetch(`http://localhost:5000/api/categorias/${idUsuario}`);
+    const data = await res.json();
+    setCategorias(data);
+  };  
 
   const handleEditar = (index) => {
     setCategoriaEditando(index);
@@ -25,21 +45,93 @@ const Categorias = () => {
     setMostrarModalAgregar(true);
   };
 
-  const handleAceptar = () => {
-    if (nuevaCategoria.nombre && nuevaCategoria.tipo) {
-      if (categoriaEditando !== null) {
-        const nuevasCategorias = categorias.map((categoria, idx) =>
-          idx === categoriaEditando ? nuevaCategoria : categoria
-        );
-        setCategorias(nuevasCategorias);
-        setCategoriaEditando(null);
-      } else {
-        setCategorias([...categorias, nuevaCategoria]);
-      }
-      setMostrarModalAgregar(false);
-      setNuevaCategoria({ nombre: "", tipo: "" });
+  // 9-4-2024 - Se agrega la función handleAceptar para manejar la creación y edición de categorías
+  const handleAceptar = async () => {
+    if (!nuevaCategoria.nombre || !nuevaCategoria.tipo) {
+      alert("Por favor, completa todos los campos.");
+      return;
     }
-  };
+  
+    const idUsuario = localStorage.getItem("id_usuario");
+  
+    // Si estás editando una categoría
+    if (categoriaEditando !== null) {
+      const categoriaAEditar = categorias[categoriaEditando];
+  
+      try {
+        const respuesta = await fetch(
+          `http://localhost:5000/api/categorias/${categoriaAEditar.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              nombre: nuevaCategoria.nombre,
+              tipo: nuevaCategoria.tipo,
+            }),
+          }
+        );
+  
+        if (!respuesta.ok) {
+          const errorText = await respuesta.text();
+          console.error("Error al editar categoría:", errorText);
+          alert("No se pudo editar la categoría.");
+          return;
+        }
+  
+        // Actualizar la lista local
+        const nuevasCategorias = [...categorias];
+        nuevasCategorias[categoriaEditando].nombre = nuevaCategoria.nombre;
+        nuevasCategorias[categoriaEditando].tipo = nuevaCategoria.tipo;
+        setCategorias(nuevasCategorias);
+  
+      } catch (error) {
+        console.error("Error de red al editar:", error);
+        alert("Error de red al editar");
+      }
+  
+    } else {
+      // Si no estás editando → crear nueva
+      const nueva = {
+        nombre: nuevaCategoria.nombre,
+        tipo: nuevaCategoria.tipo,
+        id_usuario: idUsuario
+      };
+  
+      try {
+        const respuesta = await fetch("http://localhost:5000/api/categorias/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(nueva)
+        });
+  
+        if (!respuesta.ok) {
+          const errorText = await respuesta.text();
+          console.error("Error al crear categoría:", errorText);
+          alert("No se pudo crear la categoría.");
+          return;
+        }
+  
+        const nuevaCategoriaConEditable = {
+          ...nueva,
+          editable: true
+        };
+        setCategorias(prev => [...prev, nuevaCategoriaConEditable]);
+  
+      } catch (error) {
+        console.error("Error de red al crear:", error);
+        alert("Error de red al crear");
+      }
+    }
+  
+    // Al final: limpiar y cerrar modal
+    setMostrarModalAgregar(false);
+    setCategoriaEditando(null);
+    setNuevaCategoria({ nombre: "", tipo: "" });
+  };      
 
   return (
     <div className="page-layout">
@@ -67,8 +159,14 @@ const Categorias = () => {
                   <td>{categoria.nombre}</td>
                   <td>{categoria.tipo}</td>
                   <td className="acciones">
-                    <button className="btn-editar" onClick={() => handleEditar(idx)}>Editar</button>
-                    <button className="btn-eliminar" onClick={() => handleEliminar(idx)}>Eliminar</button>
+                    {categoria.editable !== false ? (
+                      <>
+                        <button className="btn-editar" onClick={() => handleEditar(idx)}>Editar</button>
+                        <button className="btn-eliminar" onClick={() => handleEliminar(idx)}>Eliminar</button>
+                      </>
+                    ) : (
+                      <span style={{ opacity: 0.5 }}>–</span>  // ← para mantener el espacio y el balance
+                    )}
                   </td>
                 </tr>
               ))}

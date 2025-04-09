@@ -100,7 +100,8 @@ export default function Transacciones() {
     }
   };
 
-  const agregarTransaccion = () => {
+  /* AGREGADA 9-4-2025 */
+  const agregarTransaccion = async () => {
     const camposFaltantes = [];
     if (!nuevaTransaccion.fecha) camposFaltantes.push("fecha");
     if (!nuevaTransaccion.monto) camposFaltantes.push("monto");
@@ -114,28 +115,44 @@ export default function Transacciones() {
       return;
     }
   
-    setCamposInvalidos([]);
-    const nueva = { ...nuevaTransaccion, tipo };
-    const actualizadas = editIndex !== null ? [...transacciones] : [...transacciones, nueva];
-    if (editIndex !== null) actualizadas[editIndex] = nueva;
-    setTransacciones(actualizadas);
-    setEditIndex(null);
-    setNuevaTransaccion({
-      fecha: "",
-      monto: "",
-      categoria: "",
-      descripcion: "",
-      repetido: false,
-      mesPago: getMesActual(),
-      imagen: null,
-      tipoPago: "efectivo",
-      cuotas: "1",
-      interes: "0",
-      totalCredito: "",
-      valorCuota: ""
-    });
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+    const transaccionAEnviar = {
+      ...nuevaTransaccion,
+      tipo, // gasto o ingreso
+    };
+  
+    try {
+      const respuesta = await fetch("http://localhost:5000/api/transacciones/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(transaccionAEnviar)
+      });
+  
+      if (!respuesta.ok) throw new Error("Error al guardar");
+  
+      alert("Transacción guardada con éxito ✅");
+  
+      // Limpia el formulario
+      setNuevaTransaccion({
+        fecha: "",
+        monto: "",
+        categoria: "",
+        descripcion: "",
+        repetido: false,
+        mesPago: getMesActual(),
+        imagen: null,
+        tipoPago: "efectivo",
+        cuotas: "1",
+        interes: "0",
+        totalCredito: "",
+        valorCuota: ""
+      });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+  
+    } catch (error) {
+      console.error("Error al guardar transacción:", error);
+      alert("Error al guardar. Revisa la consola.");
+    }
+  };    
 
   const actualizarTransaccion = () => {
     const camposFaltantes = [];

@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import './iniciar_sesion.css';
 import FooterPrelogin from "../../components/footer-prelogin/footer2";
 import HeaderPrelogin from "../../components/header-prelogin/header2";
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function IniciarSesion() {
   const navigate = useNavigate();
@@ -16,36 +16,34 @@ export default function IniciarSesion() {
     }
   }, []);
 
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  // 9-4-2024 - Se agrega la función handleLogin para manejar el inicio de sesión
+  const handleLogin = async (event) => {
+    event.preventDefault();
+  
+    const correo = event.target[0].value;
+    const contrasena = event.target[1].value;
   
     try {
-      const response = await fetch('http://localhost:5000/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          correo: email,          
-          contrasena: password, 
-        }),
+      const respuesta = await fetch("http://localhost:5000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo, contrasena })
       });
   
-      const result = await response.json();
+      const data = await respuesta.json();
   
-      if (result.success) {
-        alert("Inicio de sesión exitoso");
-        console.log(result.usuario);
-        // Guarda el usuario en localStorage y redirige
-        localStorage.setItem("usuario", JSON.stringify(result.usuario));
-        navigate("/inicio");
-      } else {
-        alert(result.message);
+      if (!respuesta.ok) {
+        alert(data.error || "Credenciales inválidas");
+        return;
       }
+  
+      // ✅ Guarda el ID y nombre del usuario logueado
+      localStorage.setItem("id_usuario", data.usuario.id);
+      localStorage.setItem("nombre_usuario", data.usuario.nombre);
+      navigate('/inicio');
     } catch (error) {
-      alert("Error al conectar con el servidor");
-      console.error(error);
+      console.error("Error al iniciar sesión:", error);
+      alert("Hubo un error al iniciar sesión");
     }
   };    
 
