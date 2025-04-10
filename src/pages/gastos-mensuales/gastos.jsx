@@ -2,35 +2,59 @@ import React, { useState } from "react";
 import "./gastos.css";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
+import { useEffect } from "react";
 
 const GastosMensuales = () => {
-  const [gastos, setGastos] = useState([
-    { nombre: "Arriendo", descripcion: "Dirección xyz", monto: 300000 },
-    { nombre: "Internet - Televisión", descripcion: "Empresa X", monto: 40000 },
-    { nombre: "Telefonía", descripcion: "Empresa Y", monto: 30000 }
-  ]);
-
+  const [gastos, setGastos] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [nuevoGasto, setNuevoGasto] = useState({ nombre: "", descripcion: "", monto: "" });
-
   const [modoEdicion, setModoEdicion] = useState(false);
   const [indiceEditar, setIndiceEditar] = useState(null);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [indiceEliminar, setIndiceEliminar] = useState(null);
+
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    fetch(`http://localhost:5000/api/gastos?id_usuario=${id_usuario}`)
+      .then((res) => res.json())
+      .then((data) => setGastos(data));
+  }, []);
 
   const handleGuardarGasto = () => {
-    if (nuevoGasto.nombre && nuevoGasto.monto) {
-      if (modoEdicion) {
-        const actualizados = [...gastos];
-        actualizados[indiceEditar] = { ...nuevoGasto, monto: Number(nuevoGasto.monto) };
-        setGastos(actualizados);
-        setModoEdicion(false);
-        setIndiceEditar(null);
-      } else {
-        setGastos([...gastos, { ...nuevoGasto, monto: Number(nuevoGasto.monto) }]);
-      }
-      setNuevoGasto({ nombre: "", descripcion: "", monto: "" });
-      setMostrarModal(false);
+    const id_usuario = localStorage.getItem("id_usuario");
+    const payload = {
+      ...nuevoGasto,
+      id_usuario,
+      monto: Number(nuevoGasto.monto)
+    };
+  
+    if (modoEdicion) {
+      const idGasto = gastos[indiceEditar].id_gasto;
+      fetch(`http://localhost:5000/api/gastos/${idGasto}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+        .then((res) => res.json())
+        .then((editado) => {
+          const actualizados = [...gastos];
+          actualizados[indiceEditar] = editado;
+          setGastos(actualizados);
+          cerrarModal();
+        });
+    } else {
+      fetch("http://localhost:5000/api/gastos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+        .then((res) => res.json())
+        .then((nuevo) => {
+          setGastos((prev) => [...prev, nuevo]);
+          cerrarModal();
+        });
     }
-  };
+  };  
 
   const handleCancelarGasto = () => {
     setNuevoGasto({ nombre: "", descripcion: "", monto: "" });
@@ -47,9 +71,34 @@ const GastosMensuales = () => {
   };
 
   const handleEliminarGasto = (index) => {
-    const actualizados = gastos.filter((_, i) => i !== index);
-    setGastos(actualizados);
+    setIndiceEliminar(index);
+    setMostrarConfirmacion(true);
   };
+  
+  const confirmarEliminacion = () => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    const idGasto = gastos[indiceEliminar].id_gasto;
+  
+    fetch(`http://localhost:5000/api/gastos/${idGasto}?id_usuario=${id_usuario}`, {
+      method: "DELETE"
+    }).then(() => {
+      setGastos((prev) => prev.filter((_, i) => i !== indiceEliminar));
+      setMostrarConfirmacion(false);
+      setIndiceEliminar(null);
+    });
+  };
+  
+  const cancelarEliminacion = () => {
+    setMostrarConfirmacion(false);
+    setIndiceEliminar(null);
+  };  
+  
+  const cerrarModal = () => {
+    setNuevoGasto({ nombre: "", descripcion: "", monto: "" });
+    setMostrarModal(false);
+    setModoEdicion(false);
+    setIndiceEditar(null);
+  };  
 
   return (
     <div className="page-layout">
@@ -75,16 +124,14 @@ const GastosMensuales = () => {
                   <td>{gasto.descripcion}</td>
                   <td>${gasto.monto.toLocaleString()}</td>
                   <td className="acciones">
-                    <button className="btn btn-editar" onClick={() => handleEditarGasto(index)}>Editar</button>
-                    <button className="btn btn-eliminar" onClick={() => handleEliminarGasto(index)}>Eliminar</button>
+                    <button className="btn-editar" onClick={() => handleEditarGasto(index)}>Editar</button>
+                    <button className="btn-eliminar" onClick={() => handleEliminarGasto(index)}>Eliminar</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </main>
-
-
 
         {mostrarModal && (
           <div className="modal-overlay">
@@ -125,6 +172,17 @@ const GastosMensuales = () => {
           </div>
         )}
       </div>
+      {mostrarConfirmacion && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h3>¿Estás seguro de que deseas eliminar este gasto?</h3>
+            <div className="modal-buttons">
+              <button onClick={confirmarEliminacion}>Sí, eliminar</button>
+              <button onClick={cancelarEliminacion}>No, cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
       <Footer />
     </div>
   );

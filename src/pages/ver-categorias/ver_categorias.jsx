@@ -25,18 +25,34 @@ const Categorias = () => {
   const [mostrarModalAgregar, setMostrarModalAgregar] = useState(false);
   const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: "", tipo: "" });
   const [categoriaEditando, setCategoriaEditando] = useState(null);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [categoriaAEliminar, setCategoriaAEliminar] = useState(null);
 
   // 9-4-2024 - Se agrega la función handleEliminar para manejar la eliminación de categorías
-  const handleEliminar = async (index) => {
-    const id = categorias[index].id;
+  const handleEliminar = (index) => {
+    setCategoriaAEliminar(index);
+    setMostrarConfirmacion(true);
+  };  
+  
+  const confirmarEliminar = async () => {
+    const id = categorias[categoriaAEliminar].id;
+  
     await fetch(`http://localhost:5000/api/categorias/${id}`, {
-      method: "DELETE"
+      method: "DELETE",
     });
   
-    // Refresca después de eliminar
-    const res = await fetch(`http://localhost:5000/api/categorias/${idUsuario}`);
-    const data = await res.json();
-    setCategorias(data);
+    // Elimina localmente sin alterar el orden
+    const nuevas = [...categorias];
+    nuevas.splice(categoriaAEliminar, 1);
+    setCategorias(nuevas);
+  
+    setMostrarConfirmacion(false);
+    setCategoriaAEliminar(null);
+  };  
+  
+  const cancelarEliminar = () => {
+    setMostrarConfirmacion(false);
+    setCategoriaAEliminar(null);
   };  
 
   const handleEditar = (index) => {
@@ -214,6 +230,23 @@ const Categorias = () => {
           )}
         </div>
       </div>
+      {mostrarConfirmacion && (
+      <div className="modal-overlay">
+        <div className="modal-box">
+          <h3 className="modal-titulo">
+            ¿Estás segura de que deseas eliminar esta categoría?
+          </h3>
+          <div className="modal-acciones">
+            <button className="btn-aceptar" onClick={confirmarEliminar}>
+              Sí, eliminar
+            </button>
+            <button className="btn-cancelar" onClick={cancelarEliminar}>
+              No, cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
       <Footer />
     </div>
   );
