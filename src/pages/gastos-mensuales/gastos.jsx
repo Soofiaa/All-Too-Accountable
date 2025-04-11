@@ -7,11 +7,22 @@ import { useEffect } from "react";
 const GastosMensuales = () => {
   const [gastos, setGastos] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [nuevoGasto, setNuevoGasto] = useState({ nombre: "", descripcion: "", monto: "" });
+  const [nuevoGasto, setNuevoGasto] = useState({
+    nombre: "",
+    descripcion: "",
+    monto: "",
+    dia_pago: ""
+  });  
   const [modoEdicion, setModoEdicion] = useState(false);
   const [indiceEditar, setIndiceEditar] = useState(null);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [indiceEliminar, setIndiceEliminar] = useState(null);
+
+  const formatearFecha = (fechaISO) => {
+    if (!fechaISO) return "";
+    const [año, mes, dia] = fechaISO.split("T")[0].split("-");
+    return `${dia}-${mes}-${año}`;
+  };  
 
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
@@ -20,54 +31,70 @@ const GastosMensuales = () => {
       .then((data) => setGastos(data));
   }, []);
 
-  const handleGuardarGasto = () => {
-    const id_usuario = localStorage.getItem("id_usuario");
-    const payload = {
-      ...nuevoGasto,
-      id_usuario,
-      monto: Number(nuevoGasto.monto)
-    };
+  const handleEditarGasto = (index) => {
+    const gasto = gastos[index];
+    setNuevoGasto({
+      nombre: gasto.nombre,
+      descripcion: gasto.descripcion,
+      monto: gasto.monto,
+      dia_pago: gasto.dia_pago || "",
+    });
+    setModoEdicion(true);
+    setIndiceEditar(index);
+    setMostrarModal(true);
+  };
   
-    if (modoEdicion) {
-      const idGasto = gastos[indiceEditar].id_gasto;
-      fetch(`http://localhost:5000/api/gastos/${idGasto}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+  const handleGuardarGasto = () => {
+    if (nuevoGasto.nombre && nuevoGasto.monto) {
+      const id_usuario = parseInt(localStorage.getItem("id_usuario"));
+  
+      const actualizado = {
+        nombre: nuevoGasto.nombre,
+        descripcion: nuevoGasto.descripcion,
+        monto: Number(nuevoGasto.monto),
+        dia_pago: Number(nuevoGasto.dia_pago),
+        id_usuario: id_usuario
+      };
+  
+      const url = modoEdicion
+        ? `http://localhost:5000/api/gastos/${gastos[indiceEditar].id_gasto}`
+        : "http://localhost:5000/api/gastos";
+  
+      const method = modoEdicion ? "PUT" : "POST";
+  
+      fetch(url, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(actualizado)
       })
         .then((res) => res.json())
-        .then((editado) => {
-          const actualizados = [...gastos];
-          actualizados[indiceEditar] = editado;
-          setGastos(actualizados);
-          cerrarModal();
-        });
-    } else {
-      fetch("http://localhost:5000/api/gastos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      })
-        .then((res) => res.json())
-        .then((nuevo) => {
-          setGastos((prev) => [...prev, nuevo]);
-          cerrarModal();
+        .then((data) => {
+          const nuevosGastos = [...gastos];
+          if (modoEdicion) {
+            nuevosGastos[indiceEditar] = data;
+          } else {
+            nuevosGastos.push(data);
+          }
+          setGastos(nuevosGastos);
+          setNuevoGasto({ nombre: "", descripcion: "", monto: "", dia_pago: "" });
+          setModoEdicion(false);
+          setIndiceEditar(null);
+          setMostrarModal(false);
+        })
+        .catch((err) => {
+          console.error("Error al guardar el gasto:", err);
+          alert("Ocurrió un error al guardar el gasto");
         });
     }
-  };  
+  };     
 
   const handleCancelarGasto = () => {
-    setNuevoGasto({ nombre: "", descripcion: "", monto: "" });
+    setNuevoGasto({ nombre: "", descripcion: "", monto: "", dia_pago: "" });
     setMostrarModal(false);
     setModoEdicion(false);
     setIndiceEditar(null);
-  };
-
-  const handleEditarGasto = (index) => {
-    setNuevoGasto(gastos[index]);
-    setIndiceEditar(index);
-    setModoEdicion(true);
-    setMostrarModal(true);
   };
 
   const handleEliminarGasto = (index) => {
@@ -114,6 +141,7 @@ const GastosMensuales = () => {
                 <th>Nombre</th>
                 <th>Descripción</th>
                 <th>Monto</th>
+                <th>Día de pago</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -123,6 +151,7 @@ const GastosMensuales = () => {
                   <td>{gasto.nombre}</td>
                   <td>{gasto.descripcion}</td>
                   <td>${gasto.monto.toLocaleString()}</td>
+                  <td>{gasto.dia_pago}</td>
                   <td className="acciones">
                     <button className="btn-editar" onClick={() => handleEditarGasto(index)}>Editar</button>
                     <button className="btn-eliminar" onClick={() => handleEliminarGasto(index)}>Eliminar</button>
@@ -164,6 +193,18 @@ const GastosMensuales = () => {
                   placeholder="Monto"
                 />
               </label>
+              <label>
+                Día de pago (1 a 31) para cada mes
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={nuevoGasto.dia_pago}
+                  onChange={(e) =>
+                    setNuevoGasto({ ...nuevoGasto, dia_pago: e.target.value })
+                  }
+                />
+              </label>  
               <div className="modal-buttons">
                 <button onClick={handleGuardarGasto}>{modoEdicion ? "Guardar" : "Aceptar"}</button>
                 <button onClick={handleCancelarGasto}>Cancelar</button>

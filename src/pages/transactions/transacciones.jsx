@@ -379,7 +379,6 @@ export default function Transacciones() {
         ))}
       </ul>
       
-      // Historial de transacciones eliminadas
       <h3 className="titulo-secundario">Transacciones eliminadas</h3>
       <ul className="lista-transacciones historial-eliminadas">
         {eliminadas.map((t, index) => (

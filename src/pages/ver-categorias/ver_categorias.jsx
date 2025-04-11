@@ -63,14 +63,13 @@ const Categorias = () => {
 
   // 9-4-2024 - Se agrega la función handleAceptar para manejar la creación y edición de categorías
   const handleAceptar = async () => {
-    if (!nuevaCategoria.nombre || !nuevaCategoria.tipo) {
-      alert("Por favor, completa todos los campos.");
+    if (!nuevaCategoria.nombre.trim() || !nuevaCategoria.tipo.trim()) {
+      alert("Todos los campos son obligatorios.");
       return;
-    }
+    }    
   
     const idUsuario = localStorage.getItem("id_usuario");
   
-    // Si estás editando una categoría
     if (categoriaEditando !== null) {
       const categoriaAEditar = categorias[categoriaEditando];
   
@@ -83,8 +82,9 @@ const Categorias = () => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              nombre: nuevaCategoria.nombre,
-              tipo: nuevaCategoria.tipo,
+              nombre: nuevaCategoria.nombre.trim(),
+              tipo: nuevaCategoria.tipo.trim(),
+              id_usuario: parseInt(idUsuario)
             }),
           }
         );
@@ -108,13 +108,14 @@ const Categorias = () => {
       }
   
     } else {
-      // Si no estás editando → crear nueva
+      const idUsuario = parseInt(localStorage.getItem("id_usuario"));
+
       const nueva = {
-        nombre: nuevaCategoria.nombre,
-        tipo: nuevaCategoria.tipo,
+        nombre: nuevaCategoria.nombre.trim(),
+        tipo: nuevaCategoria.tipo.trim(),
         id_usuario: idUsuario
       };
-  
+
       try {
         const respuesta = await fetch("http://localhost:5000/api/categorias/", {
           method: "POST",
