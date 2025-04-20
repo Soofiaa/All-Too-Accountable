@@ -28,13 +28,14 @@ export default function Transacciones() {
   const [transacciones, setTransacciones] = useState([]);
   const [eliminadas, setEliminadas] = useState([]);
   const [historial, setHistorial] = useState([]);
-  const [showModal, setShowModal] = useState(null);
   const [transaccionEditada, setTransaccionEditada] = useState({});
   const [camposInvalidos, setCamposInvalidos] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
-  
   const fileInputRef = useRef(null);
-  
+
+  const [imagenModal, setImagenModal] = useState(null);
+  const [showModalImagen, setShowModalImagen] = useState(false);
+
   useEffect(() => {
     if (!nuevaTransaccion.mesPago) {
       setNuevaTransaccion((prev) => ({ ...prev, mesPago: getMesActual() }));
@@ -58,16 +59,21 @@ export default function Transacciones() {
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
-  
+    
     fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
       .then(res => res.json())
       .then(data => {
-        setTransacciones(data);
+        setTransacciones(data.filter(t => t.visible !== false)); // 👈 ESTA LÍNEA ES CLAVE
+        setEliminadas(data.filter(t => t.visible === false));
       })
       .catch(err => {
         console.error("Error al cargar transacciones:", err);
       });
-  }, []);  
+  }, []);
+  
+  useEffect(() => {
+    console.log("💬 Eliminadas:", eliminadas);
+  }, [eliminadas]);  
   
   const getMesActual = () => {
     const hoy = new Date();
@@ -112,9 +118,26 @@ export default function Transacciones() {
   };  
   
   const editarTransaccion = (index) => {
+    const trans = transacciones[index];
+  
+    setNuevaTransaccion({
+      fecha: trans.fecha,
+      monto: formatearConPuntos(trans.monto.toString()),
+      categoria: trans.categoria,
+      descripcion: trans.descripcion,
+      repetido: trans.repetido || false,
+      mesPago: trans.mesPago || getMesActual(),
+      imagen: null, // no se puede prellenar un input file
+      tipoPago: trans.tipoPago,
+      cuotas: trans.cuotas?.toString() || "1",
+      interes: trans.interes?.toString() || "0",
+      totalCredito: trans.totalCredito?.toString() || "",
+      valorCuota: trans.valorCuota?.toString() || ""
+    });
+  
     setEditIndex(index);
-    setTransaccionEditada({ ...transacciones[index] });
-  };
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };  
   
   const actualizarTransaccion = () => {
     const nuevas = [...transacciones];
@@ -168,20 +191,47 @@ export default function Transacciones() {
       repetido: nuevaTransaccion.repetido,
       imagen: imagenBase64
     };
-    
-    console.log("Transacción que se va a enviar:", transaccionAEnviar); // ✅ AHORA SÍ    
   
     try {
-      const respuesta = await fetch("http://localhost:5000/api/transacciones/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(transaccionAEnviar)
-      });
+      if (editIndex !== null) {
+        const id_transaccion = transacciones[editIndex].id;
+      
+        if (!id_transaccion) {
+          console.error("❌ id_transaccion no encontrado para editar:", transacciones[editIndex]);
+          alert("No se pudo actualizar la transacción. Intenta de nuevo.");
+          return;
+        }
+      
+        await fetch(`http://localhost:5000/api/transacciones/${id_transaccion}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(transaccionAEnviar)
+        });
+      } 
+      else {
+        await fetch("http://localhost:5000/api/transacciones", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(transaccionAEnviar)
+        });
+      }
   
-      if (!respuesta.ok) throw new Error("Error al guardar");
+      // Recargar todas las transacciones actualizadas
+      const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
+      const data = await respuesta.json();
+
+      const activas = data.filter(t => t.visible !== false);
+      const eliminadasTemp = data.filter(t => t.visible === false);
+
+      setTransacciones(activas);
+      setEliminadas(eliminadasTemp);
+      setEditIndex(null);
   
-      alert("✅ Transacción guardada con éxito");
-  
+      // Limpiar formulario
       setNuevaTransaccion({
         fecha: "",
         monto: "",
@@ -201,14 +251,65 @@ export default function Transacciones() {
   
     } catch (error) {
       console.error("Error al guardar transacción:", error);
-      alert("❌ Error al guardar. Revisa la consola.");
+      alert("❌ Error al guardar la transacción");
     }
-  };    
+  };  
 
+  const formatearFechaBonita = (fechaISO) => {
+    const [año, mes, dia] = fechaISO.split("-");
+    return `${dia}-${mes}-${año}`;
+  };  
+
+  const eliminarTransaccion = async (id) => {
+    try {
+      await fetch(`http://localhost:5000/api/transacciones/${id}/eliminar`, {
+        method: "PUT",
+      });
+  
+      const id_usuario = localStorage.getItem("id_usuario");
+  
+      // Recargar transacciones
+      const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
+      const data = await respuesta.json();
+  
+      // Separar visibles y eliminadas
+      setTransacciones(data.filter(t => t.visible === true || t.visible === 1));
+      setEliminadas(data.filter(t => t.visible === false));
+  
+    } catch (error) {
+      console.error("Error al eliminar transacción:", error);
+      alert("❌ Error al eliminar la transacción");
+    }
+  };
+  
+  const recuperarTransaccion = async (id) => {
+    try {
+      const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id}/recuperar`, {
+        method: "PUT"
+      });
+  
+      if (!respuesta.ok) {
+        throw new Error("Error al recuperar");
+      }
+  
+      const id_usuario = localStorage.getItem("id_usuario");
+      const resp = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
+      const data = await resp.json();
+  
+      setTransacciones(data.filter(t => t.visible !== false));
+      setEliminadas(data.filter(t => t.visible === false));
+  
+    } catch (error) {
+      console.error("Error al recuperar transacción:", error);
+      alert("❌ No se pudo recuperar la transacción");
+    }
+  };
+  
+  
   return (
     <div className="page-layout">
       <Header />
-      <div className="transacciones-container">
+      <main className="transacciones-container">
         <h1 className="titulo">Gestión de Transacciones</h1>
 
         <div className="botones-agregar">
@@ -218,6 +319,11 @@ export default function Transacciones() {
 
         <div className="formulario-transaccion">
           <h2 className={`titulo-formulario ${tipo}`}>{tipo.toUpperCase()}</h2>
+          {editIndex !== null && (
+          <div className="aviso-edicion">
+            <strong>Estás editando una transacción.</strong> No olvides guardar o cancelar los cambios.
+          </div>
+        )}
           <div className="grid-formulario">
 
             <div className="campo-fecha">
@@ -254,6 +360,15 @@ export default function Transacciones() {
                 className={camposInvalidos.includes("categoria") ? "input-error" : ""}
               >
                 <option value="" disabled hidden>Seleccione una</option>
+
+                {/* Mostrar la categoría seleccionada si no está en la lista */}
+                {!categorias.some(cat => cat.nombre === nuevaTransaccion.categoria) &&
+                  nuevaTransaccion.categoria && (
+                    <option value={nuevaTransaccion.categoria} hidden>
+                      {nuevaTransaccion.categoria} (no disponible)
+                    </option>
+                )}
+
                 {categorias.map((cat, index) => (
                   <option key={index} value={cat.nombre}>{cat.nombre}</option>
                 ))}
@@ -354,16 +469,43 @@ export default function Transacciones() {
             <button className="btn-guardar" onClick={enviarTransaccion}>
               {editIndex !== null ? "Actualizar" : "Guardar"} {tipo}
             </button>
+
+            {editIndex !== null && (
+              <button
+                className="btn-cancelar"
+                onClick={() => {
+                  setEditIndex(null);
+                  setNuevaTransaccion({
+                    fecha: "",
+                    monto: "",
+                    categoria: "",
+                    descripcion: "",
+                    repetido: false,
+                    mesPago: getMesActual(),
+                    imagen: null,
+                    tipoPago: "efectivo",
+                    cuotas: "1",
+                    interes: "0",
+                    totalCredito: "",
+                    valorCuota: ""
+                  });
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              >
+                Cancelar edición
+              </button>
+            )}
           </div>
+
         </div>
 
         <h3 className="titulo-secundario">Transacciones registradas</h3>
           <div className="lista-transacciones">
-          {transacciones.map((t, index) => (
+          {transacciones.filter(t => t.visible !== false).map((t, index) => (
             <div className="tarjeta-minimal" key={index}>
               <div className="fila-superior">
                 <div className={`tag ${t.tipo === "ingreso" ? "ingreso" : ""}`}>{t.tipo.toUpperCase()}</div>
-                <div className="fecha">{t.fecha}</div>
+                <div className="fecha">{formatearFechaBonita(t.fecha)}</div>
               </div>
 
               <div className="contenido-horizontal">
@@ -386,10 +528,25 @@ export default function Transacciones() {
                   <div>{t.tipoPago}</div>
                 </div>
               </div>
+              {t.imagen && (
+              <button
+                className="btn-ver-comprobante"
+                onClick={() => {
+                  setImagenModal(`http://localhost:5000${t.imagen}`);
+                  setShowModalImagen(true);
+                }}
+              >
+                Ver comprobante
+              </button>
+            )}
 
               <div className="acciones">
-                <button className="texto-boton editar" onClick={() => editarTransaccion(t)}>Editar</button>
-                <button className="texto-boton eliminar" onClick={() => eliminarTransaccion(t.id_transaccion)}>Eliminar</button>
+              <button className="texto-boton editar" onClick={() => editarTransaccion(index)}>
+                Editar
+              </button>
+              <button className="texto-boton eliminar" onClick={() => eliminarTransaccion(t.id)}>
+                Eliminar
+              </button>
               </div>
             </div>
           ))}
@@ -398,170 +555,45 @@ export default function Transacciones() {
       <h3 className="titulo-secundario">Transacciones eliminadas</h3>
       <ul className="lista-transacciones historial-eliminadas">
         {eliminadas.map((t, index) => (
-          <li key={index} className="item-transaccion">
-            <div className="resumen-transaccion solo-texto">
-              <div className="info-columna">
-                <div><strong>Tipo:</strong><br /> {t.tipo.toUpperCase()}</div>
-                <div><strong>Fecha:</strong><br /> {t.fecha}</div>
-                <div><strong>Descripción:</strong><br /> {t.descripcion}</div>
-                <div><strong>Tipo de pago:</strong><br /> {t.tipoPago}</div>
+          <li key={index} className={`item-transaccion eliminada ${t.tipo === "gasto" ? "gasto" : "ingreso"}`}>
+            <div className="contenido-eliminada">
+              <div className="texto-eliminada">
+                <p><strong>{t.tipo.toUpperCase()}</strong> | {formatearFechaBonita(t.fecha)}</p>
+                <p><strong>Monto:</strong> ${Number(t.monto).toLocaleString("es-CL")}</p>
+                <p><strong>Categoría:</strong> {t.categoria}</p>
+                <p><strong>Descripción:</strong> {t.descripcion}</p>
+                <p><strong>Tipo de pago:</strong> {t.tipoPago}</p>
+                  {t.imagen && (
+                  <button
+                    className="btn-ver-comprobante"
+                    onClick={() => {
+                      setImagenModal(`http://localhost:5000${t.imagen}`);
+                      setShowModalImagen(true);
+                    }}
+                  >
+                    Ver comprobante
+                  </button>
+                )}
+          
+                <div className="boton-inferior">
+                  <button className="btn-recuperar" onClick={() => recuperarTransaccion(t.id)}>Recuperar</button>
+                </div>
               </div>
             </div>
-            <div className="acciones-transaccion">
-            <button
-              onClick={() => {
-                fetch(`http://localhost:5000/transacciones/${t.id}/recuperar`, {
-                  method: 'PUT',
-                }).then(() => {
-                  setHistorial(historial.filter(item => item.id !== t.id));
-                  setTransacciones([...transacciones, { ...t, visible: true }]);
-                });
-              }}              
-            >
-              Recuperar
-            </button>
-            </div>
-          </li>
+          </li>        
         ))}
       </ul>
-      {showModal !== null && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Editar transacción</h3>
-            <div className="grid-formulario">
 
-              <div className="campo-fecha">
-                <label className="required">Fecha</label>
-                <input
-                  type="date"
-                  name="fecha"
-                  value={transaccionEditada.fecha}
-                  onChange={handleModalChange}
-                  required
-                  className={camposInvalidos.includes("fecha") ? "input-error" : ""}
-                />
-              </div>
-
-              <div className="campo-monto">
-                <label className="required">Monto</label>
-                <input
-                  type="text"
-                  name="monto"
-                  value={transaccionEditada.monto}
-                  onChange={handleModalChange}
-                  required
-                  className={camposInvalidos.includes("monto") ? "input-error" : ""}
-                />
-              </div>
-
-              <div className="campo-categoria">
-                <label className="required">Categoría</label>
-                <select
-                  name="categoria"
-                  value={transaccionEditada.categoria}
-                  onChange={handleModalChange}
-                  required
-                  className={camposInvalidos.includes("categoria") ? "input-error" : ""}
-                >
-                  <option value="" disabled hidden>Seleccione una</option>
-                  {categorias.map((cat, index) => (
-                    <option key={index} value={cat.nombre}>{cat.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="campo-descripcion">
-                <label className="required">Descripción</label>
-                <input
-                  type="text"
-                  name="descripcion"
-                  value={transaccionEditada.descripcion}
-                  onChange={handleModalChange}
-                  required
-                  className={camposInvalidos.includes("descripcion") ? "input-error" : ""}
-                />
-              </div>
-
-              <div className="campo-tipopago">
-                <label className="required">Tipo de pago</label>
-                <select
-                  name="tipoPago"
-                  value={transaccionEditada.tipoPago}
-                  onChange={handleModalChange}
-                  required
-                  className={camposInvalidos.includes("tipoPago") ? "input-error" : ""}
-                >
-                  <option value="" disabled hidden>Seleccione uno</option>
-
-                  {tipo === "ingreso" ? (
-                    <>
-                      <option value="efectivo">Efectivo</option>
-                      <option value="transferencia">Transferencia</option>
-                      <option value="deposito">Depósito</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="efectivo">Efectivo</option>
-                      <option value="debito">Débito</option>
-                      <option value="credito">Crédito</option>
-                    </>
-                  )}
-                </select>
-              </div>
-
-              {transaccionEditada.tipoPago === "credito" && (
-                <>
-                  <div className="campo-cuotas">
-                    <label className="required">Número de cuotas</label>
-                    <input
-                      type="number"
-                      name="cuotas"
-                      value={transaccionEditada.cuotas}
-                      onChange={handleModalChange}
-                      min="1"
-                      required
-                      className={`required ${camposInvalidos.includes("cuotas") ? "input-error" : ""}`}
-                    />
-                  </div>
-
-                  <div className="campo-interes">
-                    <label>Interés (%)</label>
-                    <input
-                      type="number"
-                      name="interes"
-                      value={transaccionEditada.interes}
-                      onChange={handleModalChange}
-                      step="0.1"
-                      min="0"
-                      className={camposInvalidos.includes("interes") ? "input-error" : ""}
-                    />
-                  </div>
-
-                  <div className="campo-valor-cuota">
-                    <label>Valor estimado de cuota</label>
-                    <input type="text" value={transaccionEditada.valorCuota} disabled />
-                  </div>
-
-                  <div className="campo-total-credito">
-                    <label>Total estimado a pagar</label>
-                    <input type="text" value={transaccionEditada.totalCredito} disabled />
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="acciones-transaccion">
-              <button className="btn-guardar" onClick={actualizarTransaccion}>
-                Guardar
-              </button>
-              <button className="btn-cerrar" onClick={() => setShowModal(null)}>Cancelar</button>
-            </div>
-          </div>
+      </main>
+      {showModalImagen && (
+      <div className="modal-overlay" onClick={() => setShowModalImagen(false)}>
+        <div className="modal-imagen" onClick={(e) => e.stopPropagation()}>
+          <img src={imagenModal} alt="Comprobante" />
+          <button className="btn-cerrar-modal" onClick={() => setShowModalImagen(false)}>Cerrar</button>
         </div>
-      )}
-
-    </div>
+      </div>
+    )}
     <Footer />
   </div>
-  );
-  }
+);
+}

@@ -180,6 +180,12 @@ select {
 
 footer {
   margin-top: auto;
+  width: 100%;
+  background-color: #f9fafb;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #6b7280;
 }
 
 .resumen-transaccion.solo-texto .info-columna {
@@ -407,4 +413,181 @@ label.required::after {
 .texto-boton.eliminar:hover {
   background-color: #f87171;
   color: white;
+}
+
+.aviso-edicion {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.btn-cancelar {
+  background-color: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+}
+
+.btn-cancelar:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-ver-comprobante {
+  padding: 6px 12px;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.btn-ver-comprobante:hover {
+  background-color: #bae6fd;
+  color: #0c4a6e;
+}
+
+.modal-imagen {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.modal-imagen img {
+  max-width: 100%;
+  max-height: 70vh;
+  margin-bottom: 1rem;
+}
+
+.btn-cerrar-modal {
+  background-color: #f3f4f6;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+}
+
+.btn-cerrar-modal:hover {
+  background-color: #e5e7eb;
+}
+
+.item-transaccion.eliminada {
+  background-color: #f9f9f9;
+  border-left: 4px solid #ccc;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.item-transaccion.eliminada .btn-recuperar {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.item-transaccion.eliminada .btn-recuperar:hover {
+  background-color: #45a049;
+}
+
+.item-transaccion.eliminada {
+  background-color: #f6f6f6;
+  border: 1px solid #ddd;
+  border-left: 5px solid #ccc;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.contenido-eliminada {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.texto-eliminada p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.btn-recuperar {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.btn-recuperar:hover {
+  background-color: #45a049;
+}
+
+.item-transaccion.eliminada {
+  background-color: #f6f6f6;
+  border: 1px solid #ddd;
+  border-left: 5px solid #ccc;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.contenido-eliminada {
+  display: flex;
+  flex-direction: column;
+}
+
+.texto-eliminada p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.boton-inferior {
+  margin-top: 12px;
+}
+
+.btn-recuperar {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.btn-recuperar:hover {
+  background-color: #45a049;
+}
+
+.item-transaccion.eliminada.gasto {
+  border-left: 5px solid #f87171; /* rojo claro */
+}
+
+.item-transaccion.eliminada.ingreso {
+  border-left: 5px solid #34d399; /* verde claro */
 }
