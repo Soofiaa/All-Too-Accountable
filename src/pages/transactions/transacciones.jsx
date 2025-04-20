@@ -3,8 +3,14 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import "./Transacciones.css";
+
+
+const MESES_NOMBRES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
 
 export default function Transacciones() {
   
@@ -32,9 +38,16 @@ export default function Transacciones() {
   const [camposInvalidos, setCamposInvalidos] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const fileInputRef = useRef(null);
-
+  const [formatoExportar, setFormatoExportar] = useState("excel");
+  const hoy = new Date();
+  const mesActual = String(hoy.getMonth() + 1);
+  const anioActual = String(hoy.getFullYear()); 
   const [imagenModal, setImagenModal] = useState(null);
   const [showModalImagen, setShowModalImagen] = useState(false);
+  const [mesFiltrado, setMesFiltrado] = useState(String(hoy.getMonth() + 1));
+  const [anioFiltrado, setAnioFiltrado] = useState(String(hoy.getFullYear())); 
+  const [mostrarMenuFormato, setMostrarMenuFormato] = useState(false);
+
 
   useEffect(() => {
     if (!nuevaTransaccion.mesPago) {
@@ -102,6 +115,16 @@ export default function Transacciones() {
     }));
   };  
 
+  const transaccionesFiltradas = transacciones.filter((t) => {
+    const fuente = t.mesPago || t.fecha;
+    if (!fuente || !fuente.includes("-")) return false;
+  
+    const [anio, mes] = fuente.split("-");
+    const coincideMes = !mesFiltrado || mes === mesFiltrado.padStart(2, "0");
+    const coincideAnio = !anioFiltrado || anio === anioFiltrado;
+    return t.visible !== false && coincideMes && coincideAnio;
+  });  
+  
   const handleModalChange = (e) => {
     const { name, value, type, checked, files } = e.target;
     let newValue;
@@ -282,6 +305,104 @@ export default function Transacciones() {
     }
   };
   
+  const exportarTransacciones = (mesExportar, anioExportar, formato) => {
+    const filtradas = transacciones.filter((t) => {
+      const fuente = t.mesPago || t.fecha; // usar fecha si mesPago no existe
+      if (!fuente || !fuente.includes("-")) return false;
+    
+      const [anio, mes] = fuente.split("-");
+      return anio === anioExportar && mes === mesExportar.padStart(2, "0");
+    });       
+  
+    if (filtradas.length === 0) {
+      alert("No hay transacciones para ese mes y año.");
+      return;
+    }
+  
+    const nombreMes = MESES_NOMBRES[parseInt(mesExportar) - 1];
+  
+    if (formato === "excel") {
+      const hojaDatos = filtradas.map(t => ({
+        Fecha: t.fecha,
+        Monto: t.monto,
+        Categoría: t.categoria,
+        Descripción: t.descripcion,
+        Tipo: t.tipo.toUpperCase(),
+        TipoPago: t.tipoPago
+      }));
+  
+      const hoja = XLSX.utils.json_to_sheet(hojaDatos, { origin: "A1" });
+  
+      const totalIngresos = filtradas
+        .filter(t => t.tipo === "ingreso")
+        .reduce((acc, curr) => acc + Number(curr.monto), 0);
+      const totalGastos = filtradas
+        .filter(t => t.tipo === "gasto")
+        .reduce((acc, curr) => acc + Number(curr.monto), 0);
+      const balance = totalIngresos - totalGastos;
+  
+      const resumenInicioFila = hojaDatos.length + 3;
+  
+      XLSX.utils.sheet_add_aoa(hoja, [
+        ["Resumen"],
+        ["Total ingresos", `$${totalIngresos.toLocaleString("es-CL")}`],
+        ["Total gastos", `$${totalGastos.toLocaleString("es-CL")}`],
+        ["Balance", `$${balance.toLocaleString("es-CL")}`]
+      ], { origin: `A${resumenInicioFila}` });
+  
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, "Transacciones");
+      XLSX.writeFile(libro, `Transacciones_${nombreMes}_${anioExportar}.xlsx`);
+    } else {
+      const doc = new jsPDF();
+        doc.setFontSize(12);
+        doc.text(`Transacciones de ${nombreMes} ${anioExportar}`, 14, 10);
+        
+        const filas = filtradas.map(t => [
+          t.fecha,
+          `$${t.monto}`,
+          t.categoria,
+          t.descripcion,
+          t.tipo.toUpperCase(),
+          t.tipoPago
+        ]);
+
+        autoTable(doc, {
+          startY: 20,
+          head: [["Fecha", "Monto", "Categoría", "Descripción", "Tipo", "Tipo de Pago"]],
+          body: filas
+        });        
+  
+      const totalIngresos = filtradas
+        .filter(t => t.tipo === "ingreso")
+        .reduce((acc, curr) => acc + Number(curr.monto), 0);
+
+      const totalGastos = filtradas
+        .filter(t => t.tipo === "gasto")
+        .reduce((acc, curr) => acc + Number(curr.monto), 0);
+
+      const balance = totalIngresos - totalGastos;
+
+      doc.setFontSize(11);
+      doc.text(`Resumen`, 14, doc.lastAutoTable.finalY + 10);
+      doc.text(`Total ingresos: $${totalIngresos.toLocaleString("es-CL")}`, 14, doc.lastAutoTable.finalY + 18);
+      doc.text(`Total gastos: $${totalGastos.toLocaleString("es-CL")}`, 14, doc.lastAutoTable.finalY + 26);
+      doc.text(`Balance: $${balance.toLocaleString("es-CL")}`, 14, doc.lastAutoTable.finalY + 34);
+  
+      doc.save(`Transacciones_${nombreMes}_${anioExportar}.pdf`);
+    }
+  };     
+
+  const exportarMesActual = (formato) => {
+    const hoy = new Date();
+    const mesActual = String(hoy.getMonth() + 1);
+    const anioActual = String(hoy.getFullYear());
+  
+    setFormatoExportar(formato);
+    exportarTransacciones(mesActual, anioActual, formato);
+  };
+  
+  
   const recuperarTransaccion = async (id) => {
     try {
       const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id}/recuperar`, {
@@ -312,10 +433,48 @@ export default function Transacciones() {
       <main className="transacciones-container">
         <h1 className="titulo">Gestión de Transacciones</h1>
 
-        <div className="botones-agregar">
-          <button className="btn-seleccion" onClick={() => setTipo("ingreso")}>Agregar ingreso</button>
-          <button className="btn-seleccion" onClick={() => setTipo("gasto")}>Agregar gasto</button>
+        <div className="botones-agregar-contenedor">
+          <div className="botones-izquierda">
+            <button className="btn-seleccion" onClick={() => setTipo("ingreso")}>Agregar ingreso</button>
+            <button className="btn-seleccion" onClick={() => setTipo("gasto")}>Agregar gasto</button>
+          </div>
+
+          <div className="menu-exportar-wrapper">
+            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+              <div className="menu-exportar-wrapper">
+                <button className="btn-exportar-trigger" onClick={() => setMostrarMenuFormato(!mostrarMenuFormato)}>
+                  Exportar mes actual
+                </button>
+
+                {mostrarMenuFormato && (
+                  <div className="menu-exportar">
+                    <label>Elegir formato:</label>
+                    <button
+                      className="btn-exportar-confirmar"
+                      onClick={() => {
+                        exportarMesActual("excel");
+                        setMostrarMenuFormato(false);
+                      }}
+                    >
+                      Excel (.xlsx)
+                    </button>
+
+                    <button
+                      className="btn-exportar-confirmar"
+                      onClick={() => {
+                        exportarMesActual("pdf");
+                        setMostrarMenuFormato(false);
+                      }}
+                    >
+                      PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
+
 
         <div className="formulario-transaccion">
           <h2 className={`titulo-formulario ${tipo}`}>{tipo.toUpperCase()}</h2>
@@ -498,10 +657,39 @@ export default function Transacciones() {
           </div>
 
         </div>
+        
+        <div className="filtro-botonera">
+          <div className="boton-campo">
+            <label htmlFor="mesFiltrado">Mes</label>
+            <select
+              id="mesFiltrado"
+              value={mesFiltrado}
+              onChange={(e) => setMesFiltrado(e.target.value)}
+            >
+              {[
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+              ].map((mes, i) => (
+                <option key={i} value={String(i + 1)}>{mes}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="boton-campo">
+            <label htmlFor="anioFiltrado">Año</label>
+            <input
+              id="anioFiltrado"
+              type="number"
+              value={anioFiltrado}
+              onChange={(e) => setAnioFiltrado(e.target.value)}
+              placeholder="Ej: 2025"
+            />
+          </div>
+        </div>
 
         <h3 className="titulo-secundario">Transacciones registradas</h3>
           <div className="lista-transacciones">
-          {transacciones.filter(t => t.visible !== false).map((t, index) => (
+          {transaccionesFiltradas.map((t, index) => (
             <div className="tarjeta-minimal" key={index}>
               <div className="fila-superior">
                 <div className={`tag ${t.tipo === "ingreso" ? "ingreso" : ""}`}>{t.tipo.toUpperCase()}</div>
