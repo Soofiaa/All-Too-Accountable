@@ -1,0 +1,42 @@
+.pagos-pendientes-container {
+    padding: 20px;
+  }
+  
+  .titulo {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #1f2937;
+  }
+  
+  .tabla-pagos {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .tabla-pagos th,
+  .tabla-pagos td {
+    border: 1px solid #e5e7eb;
+    padding: 12px;
+    text-align: center;
+  }
+  
+  .btn-pagado {
+    background-color: #10b981;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .btn-pagado:hover {
+    background-color: #059669;
+  }
+  
+  .mensaje {
+    font-size: 18px;
+    color: #6b7280;
+    text-align: center;
+  }
+  

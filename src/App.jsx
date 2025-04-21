@@ -9,6 +9,8 @@ import GastosMensuales from "./pages/gastos-mensuales/gastos";
 import Categorias from "./pages/ver-categorias/ver_categorias";
 import MetasAhorro from "./pages/metas-ahorro/metas";
 import RestablecerContrasena from "./pages/recuperar_pw/recuperar_contrasena";
+import PagosPendientes from "./pages/pagos_pendientes/PagosPendientes";
+
 
 function App() {
   return (
@@ -23,6 +25,7 @@ function App() {
         <Route path="/ver-categorias" element={<Categorias />} />
         <Route path="/metas-ahorro" element={<MetasAhorro />} />
         <Route path="/restablecer_contrasena" element={<RestablecerContrasena />} />
+        <Route path="/gastos-pendientes" element={<PagosPendientes />} />
       </Routes>
     </Router>
   );
