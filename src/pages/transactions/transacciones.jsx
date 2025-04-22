@@ -4,7 +4,7 @@ import Footer from "../../components/footer/footer";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import "./Transacciones.css";
+import "./transacciones.css";
 
 
 const MESES_NOMBRES = [
@@ -105,7 +105,10 @@ export default function Transacciones() {
     let newValue;
   
     if (type === "checkbox") newValue = checked;
-    else if (type === "file") newValue = files[0];
+    else if (type === "file") {
+      newValue = files[0];
+      setTransaccionEditada((prev) => ({ ...prev, imagen: newValue }));
+    }    
     else if (name === "monto") newValue = formatearConPuntos(value);
     else newValue = value;
   
@@ -150,7 +153,7 @@ export default function Transacciones() {
       descripcion: trans.descripcion,
       repetido: trans.repetido || false,
       mesPago: trans.mesPago || getMesActual(),
-      imagen: null, // no se puede prellenar un input file
+      imagen: trans.imagen || null, // ✅ ahora sí conserva la imagen
       tipoPago: trans.tipoPago,
       cuotas: trans.cuotas?.toString() || "1",
       interes: trans.interes?.toString() || "0",
@@ -158,7 +161,9 @@ export default function Transacciones() {
       valorCuota: trans.valorCuota?.toString() || ""
     });
   
+    setTransaccionEditada(trans);
     setEditIndex(index);
+  
     if (fileInputRef.current) fileInputRef.current.value = "";
   };  
   
@@ -185,76 +190,74 @@ export default function Transacciones() {
       return;
     }
   
+    const esEdicion = editIndex !== null;
+    const origen = esEdicion ? transaccionEditada : nuevaTransaccion;
+  
     const camposObligatorios = ["fecha", "monto", "categoria", "descripcion", "tipoPago"];
-    const faltantes = camposObligatorios.filter((campo) => !nuevaTransaccion[campo]);
+    const faltantes = camposObligatorios.filter((campo) => !origen[campo]);
     if (faltantes.length > 0) {
       alert("Por favor completa todos los campos obligatorios.");
       return;
     }
   
     let imagenBase64 = null;
-    if (nuevaTransaccion.imagen) {
-      imagenBase64 = await convertirA_base64(nuevaTransaccion.imagen);
+    if (origen.imagen instanceof File) {
+      imagenBase64 = await convertirA_base64(origen.imagen);
+    } else if (origen.imagen === null || origen.imagen === "") {
+      imagenBase64 = null;
     }
   
-    const montoNumerico = parseFloat(nuevaTransaccion.monto.replace(/\./g, "").replace(",", "."));
+    const montoNumerico = typeof origen.monto === "string"
+      ? parseFloat(origen.monto.replace(/\./g, "").replace(",", "."))
+      : parseFloat(origen.monto);
   
     const transaccionAEnviar = {
       id_usuario,
       tipo,
-      fecha: nuevaTransaccion.fecha,
+      fecha: origen.fecha,
       monto: montoNumerico,
-      categoria: nuevaTransaccion.categoria,
-      descripcion: nuevaTransaccion.descripcion,
-      tipoPago: nuevaTransaccion.tipoPago,
-      cuotas: parseInt(nuevaTransaccion.cuotas || 1),
-      interes: parseFloat(nuevaTransaccion.interes || 0),
-      valorCuota: parseFloat(nuevaTransaccion.valorCuota || 0),
-      totalCredito: parseFloat(nuevaTransaccion.totalCredito || 0),
-      repetido: nuevaTransaccion.repetido,
-      imagen: imagenBase64
+      categoria: origen.categoria,
+      descripcion: origen.descripcion,
+      tipoPago: origen.tipoPago,
+      cuotas: parseInt(origen.cuotas || 1),
+      interes: parseFloat(origen.interes || 0),
+      valorCuota: parseFloat(origen.valorCuota || 0),
+      totalCredito: parseFloat(origen.totalCredito || 0),
+      repetido: origen.repetido,
+      imagen: imagenBase64,
+      nombre_archivo: origen.imagen?.name || null
     };
   
     try {
-      if (editIndex !== null) {
+      if (esEdicion) {
         const id_transaccion = transacciones[editIndex].id;
-      
         if (!id_transaccion) {
           console.error("❌ id_transaccion no encontrado para editar:", transacciones[editIndex]);
           alert("No se pudo actualizar la transacción. Intenta de nuevo.");
           return;
         }
-      
+  
         await fetch(`http://localhost:5000/api/transacciones/${id_transaccion}`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(transaccionAEnviar)
         });
-      } 
-      else {
+      } else {
         await fetch("http://localhost:5000/api/transacciones", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(transaccionAEnviar)
         });
       }
   
-      // Recargar todas las transacciones actualizadas
       const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
       const data = await respuesta.json();
-
-      const activas = data.filter(t => t.visible !== false);
-      const eliminadasTemp = data.filter(t => t.visible === false);
-
-      setTransacciones(activas);
-      setEliminadas(eliminadasTemp);
-      setEditIndex(null);
   
-      // Limpiar formulario
+      setTransacciones(data.filter(t => t.visible !== false));
+      setEliminadas(data.filter(t => t.visible === false));
+      setEditIndex(null);
+      setTransaccionEditada({});
+  
       setNuevaTransaccion({
         fecha: "",
         monto: "",
@@ -271,7 +274,6 @@ export default function Transacciones() {
       });
   
       if (fileInputRef.current) fileInputRef.current.value = "";
-  
     } catch (error) {
       console.error("Error al guardar transacción:", error);
       alert("❌ Error al guardar la transacción");
@@ -281,7 +283,13 @@ export default function Transacciones() {
   const formatearFechaBonita = (fechaISO) => {
     const [año, mes, dia] = fechaISO.split("-");
     return `${dia}-${mes}-${año}`;
-  };  
+  };
+  
+  const urlImagenEditada =
+    transaccionEditada.imagen &&
+    typeof transaccionEditada.imagen === "string"
+      ? `http://localhost:5000${transaccionEditada.imagen}`
+      : null;
 
   const eliminarTransaccion = async (id) => {
     try {
@@ -618,9 +626,39 @@ export default function Transacciones() {
                 ref={fileInputRef}
                 name="imagen"
                 onChange={handleChange}
+                accept=".jpg,.jpeg,.png,.pdf,.xlsx,.xls,.csv,.doc,.docx,.txt"
               />
-            </div>
+              {transaccionEditada?.imagen && (
+              <div className="archivo-existente">
+                <p style={{ marginTop: "8px", fontSize: "0.9em", color: "#374151" }}>
+                  📎 Ya hay un comprobante guardado:
+                  <span style={{ display: "flex", gap: "12px", marginTop: "6px" }}>
+                  {urlImagenEditada && (
+                    <span
+                      className="link-accion"
+                      onClick={() => {
+                        setImagenModal(urlImagenEditada);
+                        setShowModalImagen(true);
+                      }}
+                    >
+                      Ver comprobante
+                    </span>
+                  )}
+                    <span
+                      className="link-accion eliminar"
+                      onClick={() => {
+                        setTransaccionEditada((prev) => ({ ...prev, imagen: null }));
+                        setNuevaTransaccion((prev) => ({ ...prev, imagen: null }));
+                      }}
+                    >
+                      Eliminar comprobante
+                    </span>
+                  </span>
+                </p>
+              </div>
+            )}
 
+            </div>
 
           </div>
 
@@ -634,6 +672,7 @@ export default function Transacciones() {
                 className="btn-cancelar"
                 onClick={() => {
                   setEditIndex(null);
+                  setTransaccionEditada({});
                   setNuevaTransaccion({
                     fecha: "",
                     monto: "",

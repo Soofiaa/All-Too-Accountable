@@ -437,6 +437,7 @@ label.required::after {
 
 .btn-ver-comprobante {
   padding: 6px 12px;
+  width: 10%;
   background-color: #e0f2fe;
   color: #0369a1;
   border: 1px solid #bae6fd;
@@ -825,4 +826,61 @@ label.required::after {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.botones-comprobante {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.btn-ver-comprobante,
+.btn-eliminar-comprobante {
+  font-size: 0.85em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-ver-comprobante {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.btn-ver-comprobante:hover {
+  background-color: #bae6fd;
+}
+
+.btn-eliminar-comprobante {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  max-width: fit-content;
+}
+
+.btn-eliminar-comprobante:hover {
+  background-color: #fee2e2;
+}
+
+.link-accion {
+  color: #2563eb;
+  font-weight: 500;
+  font-size: 0.9em;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-accion:hover {
+  color: #1d4ed8;
+}
+
+.link-accion.eliminar {
+  color: #b91c1c;
+}
+
+.link-accion.eliminar:hover {
+  color: #991b1b;
 }
