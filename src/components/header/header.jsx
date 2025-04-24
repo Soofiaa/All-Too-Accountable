@@ -28,7 +28,7 @@ export default function Header() {
         <nav className={`header-nav ${isMenuOpen ? "open" : ""}`}>
           <button className="nav-button" onClick={() => navigate("/inicio")}>Inicio</button>
           <button className="nav-button" onClick={() => navigate("/transacciones")}>Transacciones</button>
-          <button className="nav-button" onClick={() => navigate("/ver-categorias")}>Ver categorias</button>
+          <button className="nav-button" onClick={() => navigate("/ver-categorias")}>Categorias</button>
           <button className="nav-button" onClick={() => navigate("/gastos-mensuales")}>Gastos mensuales</button>
           <button className="nav-button" onClick={() => navigate("/gastos-pendientes")}>Gastos pendientes</button>
           <button className="nav-button" onClick={() => navigate("/metas-ahorro")}>Metas de ahorro</button>

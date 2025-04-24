@@ -155,7 +155,7 @@ const Categorias = () => {
       <Header />
       <div className="categorias-container">
         <div className="contenido">
-          <h2 className="titulo-categorias">Categorías</h2>
+          <h2 className="titulo-categorias">Gestión de Categorías</h2>
           <button
             className="btn-agregar"
             onClick={() => setMostrarModalAgregar(true)}

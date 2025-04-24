@@ -88,6 +88,32 @@ export default function Transacciones() {
     console.log("💬 Eliminadas:", eliminadas);
   }, [eliminadas]);  
   
+  useEffect(() => {
+    if (nuevaTransaccion.tipoPago !== "credito") return;
+  
+    const monto = parseFloat((nuevaTransaccion.monto || "0").replace(/\./g, "").replace(",", ".")) || 0;
+    const cuotas = parseInt(nuevaTransaccion.cuotas) || 1;
+    const interes = parseFloat(nuevaTransaccion.interes) || 0;
+  
+    let totalCredito = monto;
+    if (interes > 0) {
+      totalCredito = monto * Math.pow(1 + interes / 100, cuotas);
+    }
+  
+    const valorCuota = totalCredito / cuotas;
+  
+    setNuevaTransaccion(prev => ({
+      ...prev,
+      totalCredito: totalCredito.toFixed(0),
+      valorCuota: valorCuota.toFixed(0)
+    }));
+  }, [
+    nuevaTransaccion.monto,
+    nuevaTransaccion.cuotas,
+    nuevaTransaccion.interes,
+    nuevaTransaccion.tipoPago
+  ]);
+  
   const getMesActual = () => {
     const hoy = new Date();
     const año = hoy.getFullYear();
@@ -439,7 +465,7 @@ export default function Transacciones() {
     <div className="page-layout">
       <Header />
       <main className="transacciones-container">
-        <h1 className="titulo">Gestión de Transacciones</h1>
+        <h1 className="titulo-transacciones">Gestión de Transacciones</h1>
 
         <div className="botones-agregar-contenedor">
           <div className="botones-izquierda">

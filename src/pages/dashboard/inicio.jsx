@@ -13,6 +13,8 @@ import {
 } from "chart.js";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
+import { useEffect } from "react";
+import axios from "axios";
 
 ChartJS.register(
   CategoryScale,
@@ -25,13 +27,35 @@ ChartJS.register(
 );
 
 export default function DashboardFinanciero() {
-  const [salario, setSalario] = useState(600000);
-  const [ahorros, setAhorros] = useState(150000);
+  const [salario, setSalario] = useState(0);
+  const [ahorros, setAhorros] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [nuevoSalario, setNuevoSalario] = useState("");
   const [showAgregarAhorro, setShowAgregarAhorro] = useState(false);
   const [showQuitarAhorro, setShowQuitarAhorro] = useState(false);
   const [montoAhorro, setMontoAhorro] = useState("");
+  const [diaFacturacion, setDiaFacturacion] = useState(1);
+  const [mostrarModalFacturacion, setMostrarModalFacturacion] = useState(false);
+  const [nuevoDiaFacturacion, setNuevoDiaFacturacion] = useState(diaFacturacion);
+  const [nombreUsuario, setNombreUsuario] = useState("Usuario");
+  const [nuevoNombreUsuario, setNuevoNombreUsuario] = useState("");
+  const [mostrarModalNombre, setMostrarModalNombre] = useState(false);
+
+
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (id_usuario) {
+      axios.get(`http://localhost:5000/api/detalles_usuario?id_usuario=${id_usuario}`)
+        .then(res => {
+          const { salario, ahorros, nombre_usuario, dia_facturacion } = res.data;
+          setSalario(salario);
+          setAhorros(ahorros);
+          setNombreUsuario(nombre_usuario);
+          setDiaFacturacion(dia_facturacion);
+        })
+        .catch(err => console.error("Error cargando detalles:", err));
+    }
+  }, []);
 
   const data = {
     labels: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"],
@@ -61,29 +85,102 @@ export default function DashboardFinanciero() {
     },
   };
 
-  const handleSave = () => {
-    if (nuevoSalario !== "") {
-      setSalario(Number(nuevoSalario));
-      setShowModal(false);
-      setNuevoSalario("");
+  const handleActualizarNombre = () => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (nuevoNombreUsuario && id_usuario) {
+      axios.post("http://localhost:5000/api/actualizar_nombre", {
+        id_usuario: parseInt(id_usuario),
+        nombre_usuario: nuevoNombreUsuario
+      })
+      .then(() => {
+        setNombreUsuario(nuevoNombreUsuario);
+        setMostrarModalNombre(false);
+        setNuevoNombreUsuario("");
+      })
+      .catch(err => {
+        console.error("Error al actualizar nombre:", err);
+        alert("No se pudo actualizar el nombre.");
+      });
     }
   };
+  
+  const handleActualizarFacturacion = () => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (nuevoDiaFacturacion && id_usuario) {
+      axios.post("http://localhost:5000/api/actualizar_facturacion", {
+        id_usuario: parseInt(id_usuario),
+        dia_facturacion: parseInt(nuevoDiaFacturacion)
+      })
+      .then(() => {
+        setDiaFacturacion(parseInt(nuevoDiaFacturacion));
+        setMostrarModalFacturacion(false);
+      })
+      .catch(err => {
+        console.error("Error al actualizar día de facturación:", err);
+        alert("No se pudo actualizar el día.");
+      });
+    }
+  };
+  
+  const handleSave = () => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (nuevoSalario !== "" && id_usuario) {
+      axios.post("http://localhost:5000/api/actualizar_salario", {
+        id_usuario: parseInt(id_usuario),
+        salario: parseInt(nuevoSalario)
+      })
+      .then(() => {
+        setSalario(parseInt(nuevoSalario));
+        setShowModal(false);
+        setNuevoSalario("");
+      })
+      .catch(err => {
+        console.error("Error al actualizar salario:", err);
+        alert("No se pudo actualizar el salario.");
+      });
+    }
+  };  
 
   const handleAgregarAhorro = () => {
-    if (montoAhorro !== "") {
-      setAhorros((prev) => prev + Number(montoAhorro));
-      setShowAgregarAhorro(false);
-      setMontoAhorro("");
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (montoAhorro !== "" && id_usuario) {
+      const nuevo = ahorros + parseInt(montoAhorro);
+      axios.post("http://localhost:5000/api/actualizar_ahorros", {
+        id_usuario: parseInt(id_usuario),
+        ahorros: nuevo
+      })
+      .then(() => {
+        setAhorros(nuevo);
+        setShowAgregarAhorro(false);
+        setMontoAhorro("");
+      })
+      .catch(err => {
+        console.error("Error al agregar ahorro:", err);
+        alert("No se pudo agregar el monto.");
+      });
+    }
+  };  
+
+  const handleQuitarAhorro = () => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (montoAhorro !== "" && id_usuario) {
+      const nuevo = Math.max(0, ahorros - parseInt(montoAhorro));
+      axios.post("http://localhost:5000/api/actualizar_ahorros", {
+        id_usuario: parseInt(id_usuario),
+        ahorros: nuevo
+      })
+      .then(() => {
+        setAhorros(nuevo);
+        setShowQuitarAhorro(false);
+        setMontoAhorro("");
+      })
+      .catch(err => {
+        console.error("Error al descontar ahorro:", err);
+        alert("No se pudo descontar el monto.");
+      });
     }
   };
 
-  const handleQuitarAhorro = () => {
-    if (montoAhorro !== "") {
-      setAhorros((prev) => Math.max(0, prev - Number(montoAhorro)));
-      setShowQuitarAhorro(false);
-      setMontoAhorro("");
-    }
-  };
 
   return (
     <div className="page-layout">
@@ -91,11 +188,38 @@ export default function DashboardFinanciero() {
     <div className="dashboard-container">
       <main className="dashboard-main">
         <aside className="dashboard-sidebar">
-          <div className="dashboard-profile">
-            <img src="/user-avatar.png" alt="Usuario" className="dashboard-avatar" />
-            <p className="dashboard-frecuencia">Anual o mensual, deberia poder elegirse el modo de gráfico</p>
-            <button>Cambiar foto de perfil</button>
-            <button>Cambiar nombre de usuario</button>
+
+          <div className="dashboard-profile dashboard-card">
+            <h3 className="dashboard-nombre">Bienvenido, {nombreUsuario}</h3>
+            <button onClick={() => setMostrarModalNombre(true)}>Cambiar nombre</button>
+            {mostrarModalNombre && (
+              <div className="modal-overlay">
+                <div className="modal-box">
+                  <h3>Cambiar nombre de usuario</h3>
+                  <input
+                    type="text"
+                    placeholder="Nuevo nombre"
+                    value={nuevoNombreUsuario}
+                    onChange={(e) => setNuevoNombreUsuario(e.target.value)}
+                  />
+                  <div className="modal-buttons">
+                    <button onClick={handleActualizarNombre}>Aceptar</button>
+                    <button onClick={() => {
+                      setMostrarModalNombre(false);
+                      setNuevoNombreUsuario("");
+                    }}>Cancelar</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="dashboard-dia-facturacion dashboard-card">
+            <h3>Fecha de facturación</h3>
+            <div className="dashboard-box">Día {diaFacturacion}</div>
+            <button className="center-button" onClick={() => setMostrarModalFacturacion(true)}>
+              Editar día
+            </button>
           </div>
 
           <div className="dashboard-salario">

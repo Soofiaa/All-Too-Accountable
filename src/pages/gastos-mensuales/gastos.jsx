@@ -132,7 +132,7 @@ const GastosMensuales = () => {
       <Header />
       <div className="gastos-mensuales-container">
         <main className="contenido">
-          <h2 className="titulo">Gastos mensuales</h2>
+          <h2 className="titulo-gm">Gastos mensuales</h2>
           <button className="btn-agregar" onClick={() => setMostrarModal(true)}>Agregar gasto mensual</button>
 
           <table className="tabla-gastos">

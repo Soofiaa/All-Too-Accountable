@@ -1,11 +1,23 @@
 .pagos-pendientes-container {
-    padding: 20px;
-  }
+  max-width: 1200px;
+  margin: 40px auto 0 auto;
+  padding: 24px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.03);
+}
+
+.contenido-tabla {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
   
-  .titulo {
-    font-size: 24px;
-    margin-bottom: 20px;
-    color: #1f2937;
+  .titulo-pp {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 1rem;
   }
   
   .tabla-pagos {
