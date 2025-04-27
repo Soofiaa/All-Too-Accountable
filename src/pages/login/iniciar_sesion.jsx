@@ -12,9 +12,17 @@ export default function IniciarSesion() {
   useEffect(() => {
     const usuario = localStorage.getItem("usuario");
     if (usuario) {
-      navigate("/inicio");
+      try {
+        const parsed = JSON.parse(usuario);
+        if (parsed?.id) {
+          navigate("/inicio");
+        }
+      } catch (e) {
+        console.warn("⚠️ Error al parsear usuario:", e);
+        localStorage.removeItem("usuario");
+      }
     }
-  }, []);
+  }, []);  
 
   // 9-4-2024 - Se agrega la función handleLogin para manejar el inicio de sesión
   const handleLogin = async (event) => {
@@ -37,9 +45,7 @@ export default function IniciarSesion() {
         return;
       }
   
-      // ✅ Guarda el ID y nombre del usuario logueado
-      localStorage.setItem("id_usuario", data.usuario.id);
-      localStorage.setItem("nombre_usuario", data.usuario.nombre);
+      localStorage.setItem("usuario", JSON.stringify(data.usuario)); // guarda el usuario completo
       navigate('/inicio');
     } catch (error) {
       console.error("Error al iniciar sesión:", error);

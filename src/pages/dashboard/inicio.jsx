@@ -43,19 +43,27 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
-    if (id_usuario) {
-      axios.get(`http://localhost:5000/api/detalles_usuario?id_usuario=${id_usuario}`)
-        .then(res => {
-          const { salario, ahorros, nombre_usuario, dia_facturacion } = res.data;
-          setSalario(salario);
-          setAhorros(ahorros);
-          setNombreUsuario(nombre_usuario);
-          setDiaFacturacion(dia_facturacion);
-        })
-        .catch(err => console.error("Error cargando detalles:", err));
+    const usuarioStr = localStorage.getItem("usuario");
+    if (!usuarioStr) {
+      window.location.href = "/"; // redirige al login si no hay sesión
+      return;
     }
-  }, []);
+  
+    const usuario = JSON.parse(usuarioStr);
+    const id_usuario = usuario.id;
+  
+    axios.get(`http://localhost:5000/api/detalles_usuario?id_usuario=${id_usuario}`)
+      .then(res => {
+        console.log("🔍 Detalles recibidos:", res.data);
+        const { salario, ahorros, nombre_usuario, dia_facturacion } = res.data;
+        setSalario(salario);
+        setAhorros(ahorros);
+        setNombreUsuario(nombre_usuario);
+        setDiaFacturacion(dia_facturacion);
+      })
+      .catch(err => console.error("❌ Error cargando detalles:", err));
+  }, []);   
+
 
   const data = {
     labels: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"],
@@ -87,22 +95,26 @@ export default function DashboardFinanciero() {
 
   const handleActualizarNombre = () => {
     const id_usuario = localStorage.getItem("id_usuario");
-    if (nuevoNombreUsuario && id_usuario) {
+    const nombre = nuevoNombreUsuario.trim();
+  
+    if (nombre && id_usuario) {
       axios.post("http://localhost:5000/api/actualizar_nombre", {
         id_usuario: parseInt(id_usuario),
-        nombre_usuario: nuevoNombreUsuario
+        nombre_usuario: nombre
       })
       .then(() => {
-        setNombreUsuario(nuevoNombreUsuario);
+        setNombreUsuario(nombre);
         setMostrarModalNombre(false);
         setNuevoNombreUsuario("");
       })
       .catch(err => {
-        console.error("Error al actualizar nombre:", err);
+        console.error("❌ Error al actualizar nombre:", err);
         alert("No se pudo actualizar el nombre.");
       });
+    } else {
+      alert("Debe ingresar un nombre válido.");
     }
-  };
+  };  
   
   const handleActualizarFacturacion = () => {
     const id_usuario = localStorage.getItem("id_usuario");
@@ -124,13 +136,14 @@ export default function DashboardFinanciero() {
   
   const handleSave = () => {
     const id_usuario = localStorage.getItem("id_usuario");
-    if (nuevoSalario !== "" && id_usuario) {
+    if (nuevoSalario && id_usuario) {
+      const limpio = parseInt(nuevoSalario.replace(/\./g, ""));
       axios.post("http://localhost:5000/api/actualizar_salario", {
         id_usuario: parseInt(id_usuario),
-        salario: parseInt(nuevoSalario)
+        salario: limpio
       })
       .then(() => {
-        setSalario(parseInt(nuevoSalario));
+        setSalario(limpio);
         setShowModal(false);
         setNuevoSalario("");
       })
@@ -144,7 +157,9 @@ export default function DashboardFinanciero() {
   const handleAgregarAhorro = () => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (montoAhorro !== "" && id_usuario) {
-      const nuevo = ahorros + parseInt(montoAhorro);
+      const valor = parseInt(montoAhorro.replace(/\./g, ""));
+      const nuevo = ahorros + valor;
+
       axios.post("http://localhost:5000/api/actualizar_ahorros", {
         id_usuario: parseInt(id_usuario),
         ahorros: nuevo
@@ -164,7 +179,9 @@ export default function DashboardFinanciero() {
   const handleQuitarAhorro = () => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (montoAhorro !== "" && id_usuario) {
-      const nuevo = Math.max(0, ahorros - parseInt(montoAhorro));
+      const valor = parseInt(montoAhorro.replace(/\./g, ""));
+      const nuevo = Math.max(0, ahorros - valor);
+
       axios.post("http://localhost:5000/api/actualizar_ahorros", {
         id_usuario: parseInt(id_usuario),
         ahorros: nuevo
@@ -215,7 +232,7 @@ export default function DashboardFinanciero() {
           </div>
 
           <div className="dashboard-dia-facturacion dashboard-card">
-            <h3>Fecha de facturación</h3>
+            <h3>Día de facturación</h3>
             <div className="dashboard-box">Día {diaFacturacion}</div>
             <button className="center-button" onClick={() => setMostrarModalFacturacion(true)}>
               Editar día
@@ -224,13 +241,17 @@ export default function DashboardFinanciero() {
 
           <div className="dashboard-salario">
             <h3>Salario</h3>
-            <div className="dashboard-box">${salario.toLocaleString()}</div>
+            <div className="dashboard-box">
+              ${Number(salario).toLocaleString("es-CL", { minimumFractionDigits: 0 })}
+            </div>
             <button className="center-button" onClick={() => setShowModal(true)}>Editar salario</button>
           </div>
 
           <div className="dashboard-ahorros">
             <h3>Ahorros</h3>
-            <div className="dashboard-box">$ {ahorros.toLocaleString()}</div>
+            <div className="dashboard-box">
+              ${Number(ahorros).toLocaleString("es-CL", { minimumFractionDigits: 0 })}
+            </div>
             <div className="dashboard-ahorro-btns">
               <button className="center-button" onClick={() => setShowAgregarAhorro(true)}>Añadir monto</button>
               <button className="center-button" onClick={() => setShowQuitarAhorro(true)}>Descontar monto</button>
@@ -254,15 +275,13 @@ export default function DashboardFinanciero() {
             <div className="modal-input-container">
               <span>$</span>
               <input
-                type="number"
-                placeholder="Ingrese el salario sin puntos ni comas"
-                min="0"
+                type="text"
+                placeholder="Ingrese el salario"
                 value={nuevoSalario}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  if (/^\d*$/.test(value)) {
-                    setNuevoSalario(value);
-                  }
+                  const value = e.target.value.replace(/\D/g, ""); // solo números
+                  const formatted = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                  setNuevoSalario(formatted);
                 }}
               />
             </div>
@@ -279,18 +298,16 @@ export default function DashboardFinanciero() {
           <div className="modal-box">
             <h3>{showAgregarAhorro ? "Agregar monto en ahorros" : "Eliminar monto en ahorros"}</h3>
             <div className="modal-input-container">
-              <input
-                type="number"
-                placeholder={showAgregarAhorro ? "Escriba el monto a agregar" : "Escriba el monto a disminuir"}
-                min="0"
-                value={montoAhorro}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (/^\d*$/.test(value)) {
-                    setMontoAhorro(value);
-                  }
-                }}
-              />
+            <input
+              type="text"
+              placeholder={showAgregarAhorro ? "Escriba el monto a agregar" : "Escriba el monto a disminuir"}
+              value={montoAhorro}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, ""); // solo números
+                const formatted = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                setMontoAhorro(formatted);
+              }}
+            />
             </div>
             <div className="modal-buttons">
               <button onClick={showAgregarAhorro ? handleAgregarAhorro : handleQuitarAhorro}>Aceptar</button>
@@ -304,6 +321,24 @@ export default function DashboardFinanciero() {
         </div>
       )}
     </div>
+    {mostrarModalFacturacion && (
+  <div className="modal-overlay">
+    <div className="modal-box">
+      <h3>Editar día de facturación</h3>
+      <input
+        type="number"
+        min="1"
+        max="31"
+        value={nuevoDiaFacturacion}
+        onChange={(e) => setNuevoDiaFacturacion(e.target.value)}
+      />
+      <div className="modal-buttons">
+        <button onClick={handleActualizarFacturacion}>Aceptar</button>
+        <button onClick={() => setMostrarModalFacturacion(false)}>Cancelar</button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
