@@ -23,7 +23,7 @@ const Categorias = () => {
 }, []);
 
   const [mostrarModalAgregar, setMostrarModalAgregar] = useState(false);
-  const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: "", tipo: "" });
+  const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: "", tipo: "", monto_limite: 0 });
   const [categoriaEditando, setCategoriaEditando] = useState(null);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [categoriaAEliminar, setCategoriaAEliminar] = useState(null);
@@ -56,38 +56,39 @@ const Categorias = () => {
   };  
 
   const handleEditar = (index) => {
+    const categoria = categorias[index];
+    setNuevaCategoria({
+      nombre: categoria.nombre,
+      tipo: categoria.tipo,
+      monto_limite: categoria.monto_limite ? categoria.monto_limite.toLocaleString("es-CL") : ""
+    });
     setCategoriaEditando(index);
-    setNuevaCategoria(categorias[index]);
     setMostrarModalAgregar(true);
-  };
+  };  
 
-  // 9-4-2024 - Se agrega la función handleAceptar para manejar la creación y edición de categorías
   const handleAceptar = async () => {
     if (!nuevaCategoria.nombre.trim() || !nuevaCategoria.tipo.trim()) {
       alert("Todos los campos son obligatorios.");
       return;
-    }    
+    }
   
     const idUsuario = localStorage.getItem("id_usuario");
+    const montoLimpio = nuevaCategoria.monto_limite ? parseInt(nuevaCategoria.monto_limite.replace(/\./g, "")) : 0;
   
     if (categoriaEditando !== null) {
       const categoriaAEditar = categorias[categoriaEditando];
   
       try {
-        const respuesta = await fetch(
-          `http://localhost:5000/api/categorias/${categoriaAEditar.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              nombre: nuevaCategoria.nombre.trim(),
-              tipo: nuevaCategoria.tipo.trim(),
-              id_usuario: parseInt(idUsuario)
-            }),
-          }
-        );
+        const respuesta = await fetch(`http://localhost:5000/api/categorias/${categoriaAEditar.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: nuevaCategoria.nombre.trim(),
+            tipo: nuevaCategoria.tipo.trim(),
+            monto_limite: montoLimpio,
+            id_usuario: parseInt(idUsuario)
+          }),
+        });
   
         if (!respuesta.ok) {
           const errorText = await respuesta.text();
@@ -96,10 +97,13 @@ const Categorias = () => {
           return;
         }
   
-        // Actualizar la lista local
         const nuevasCategorias = [...categorias];
-        nuevasCategorias[categoriaEditando].nombre = nuevaCategoria.nombre;
-        nuevasCategorias[categoriaEditando].tipo = nuevaCategoria.tipo;
+        nuevasCategorias[categoriaEditando] = {
+          ...nuevasCategorias[categoriaEditando],
+          nombre: nuevaCategoria.nombre,
+          tipo: nuevaCategoria.tipo,
+          monto_limite: montoLimpio
+        };
         setCategorias(nuevasCategorias);
   
       } catch (error) {
@@ -108,20 +112,17 @@ const Categorias = () => {
       }
   
     } else {
-      const idUsuario = parseInt(localStorage.getItem("id_usuario"));
-
       const nueva = {
         nombre: nuevaCategoria.nombre.trim(),
         tipo: nuevaCategoria.tipo.trim(),
-        id_usuario: idUsuario
+        monto_limite: montoLimpio,
+        id_usuario: parseInt(idUsuario)
       };
-
+  
       try {
         const respuesta = await fetch("http://localhost:5000/api/categorias/", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nueva)
         });
   
@@ -132,10 +133,7 @@ const Categorias = () => {
           return;
         }
   
-        const nuevaCategoriaConEditable = {
-          ...nueva,
-          editable: true
-        };
+        const nuevaCategoriaConEditable = { ...nueva, editable: true };
         setCategorias(prev => [...prev, nuevaCategoriaConEditable]);
   
       } catch (error) {
@@ -144,11 +142,11 @@ const Categorias = () => {
       }
     }
   
-    // Al final: limpiar y cerrar modal
     setMostrarModalAgregar(false);
     setCategoriaEditando(null);
-    setNuevaCategoria({ nombre: "", tipo: "" });
-  };      
+    setNuevaCategoria({ nombre: "", tipo: "", monto_limite: "" });
+  };
+
 
   return (
     <div className="page-layout">
@@ -163,10 +161,11 @@ const Categorias = () => {
             Agregar categoría
           </button>
           <table className="tabla-categorias">
-            <thead>
+          <thead>
               <tr>
                 <th>Nombre</th>
                 <th>Tipo</th>
+                <th>Monto Límite</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -175,6 +174,9 @@ const Categorias = () => {
                 <tr key={idx} className="item-categoria">
                   <td>{categoria.nombre}</td>
                   <td>{categoria.tipo}</td>
+                  <td>
+                    {categoria.monto_limite ? `$${categoria.monto_limite.toLocaleString("es-CL")}` : "Sin límite"}
+                  </td>
                   <td className="acciones">
                     {categoria.editable !== false ? (
                       <>
@@ -182,7 +184,7 @@ const Categorias = () => {
                         <button className="btn-eliminar" onClick={() => handleEliminar(idx)}>Eliminar</button>
                       </>
                     ) : (
-                      <span style={{ opacity: 0.5 }}>–</span>  // ← para mantener el espacio y el balance
+                      <span style={{ opacity: 0.5 }}>–</span>
                     )}
                   </td>
                 </tr>
@@ -213,6 +215,24 @@ const Categorias = () => {
                     <option value="Gasto">Gasto</option>
                     <option value="Ambos">Ambos</option>
                   </select>
+                </label>
+                <label>
+                  Monto límite
+                  <input
+                    type="text"
+                    placeholder="Ingrese monto límite"
+                    value={nuevaCategoria.monto_limite}
+                    onChange={(e) => {
+                      let value = e.target.value.replace(/\./g, "");
+                      if (value === "") {
+                        setNuevaCategoria({ ...nuevaCategoria, monto_limite: "" });
+                      } else if (/^\d+$/.test(value)) {
+                        const numeroConPuntos = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                        setNuevaCategoria({ ...nuevaCategoria, monto_limite: numeroConPuntos });
+                      }
+                    }}
+                    disabled={nuevaCategoria.nombre === "General"}
+                  />
                 </label>
                 <div className="modal-acciones">
                   <button className="btn-aceptar" onClick={handleAceptar}>Aceptar</button>

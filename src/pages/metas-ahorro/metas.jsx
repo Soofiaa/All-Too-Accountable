@@ -137,7 +137,7 @@ export default function MetasAhorro() {
       <Header />
       <div className="metas-ahorro-container">
         <div className="contenido">
-          <h2 className="titulo">Metas de ahorro</h2>
+          <h2 className="titulo">Gestión de metas de ahorro</h2>
 
           <button className="btn-agregar" onClick={() => setMostrarModal(true)}>
             Agregar meta de ahorro

@@ -38,6 +38,7 @@ export default function Transacciones() {
   const [camposInvalidos, setCamposInvalidos] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const fileInputRef = useRef(null);
+  const formularioRef = useRef(null);
   const [formatoExportar, setFormatoExportar] = useState("excel");
   const hoy = new Date();
   const mesActual = String(hoy.getMonth() + 1);
@@ -71,16 +72,25 @@ export default function Transacciones() {
 
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
-    if (!id_usuario) return;
-    
+  
+    if (!id_usuario) {
+      console.error("ID de usuario no encontrado en localStorage");
+      return;
+    }
+  
     fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Error al cargar transacciones: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
-        setTransacciones(data.filter(t => t.visible !== false)); // 👈 ESTA LÍNEA ES CLAVE
+        setTransacciones(data.filter(t => t.visible !== false));
         setEliminadas(data.filter(t => t.visible === false));
       })
-      .catch(err => {
-        console.error("Error al cargar transacciones:", err);
+      .catch(error => {
+        console.error("Error al cargar transacciones:", error);
       });
   }, []);
   
@@ -148,11 +158,14 @@ export default function Transacciones() {
     const fuente = t.mesPago || t.fecha;
     if (!fuente || !fuente.includes("-")) return false;
   
-    const [anio, mes] = fuente.split("-");
+    const partes = fuente.split("-");
+    const anio = partes[0];
+    const mes = partes[1]; // corregido
+  
     const coincideMes = !mesFiltrado || mes === mesFiltrado.padStart(2, "0");
     const coincideAnio = !anioFiltrado || anio === anioFiltrado;
     return t.visible !== false && coincideMes && coincideAnio;
-  });  
+  });    
   
   const handleModalChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -171,6 +184,7 @@ export default function Transacciones() {
   
   const editarTransaccion = (index) => {
     const trans = transacciones[index];
+    setEditIndex(index);
   
     setNuevaTransaccion({
       fecha: trans.fecha,
@@ -179,7 +193,7 @@ export default function Transacciones() {
       descripcion: trans.descripcion,
       repetido: trans.repetido || false,
       mesPago: trans.mesPago || getMesActual(),
-      imagen: trans.imagen || null, // ✅ ahora sí conserva la imagen
+      imagen: trans.imagen || null,
       tipoPago: trans.tipoPago,
       cuotas: trans.cuotas?.toString() || "1",
       interes: trans.interes?.toString() || "0",
@@ -187,11 +201,13 @@ export default function Transacciones() {
       valorCuota: trans.valorCuota?.toString() || ""
     });
   
-    setTransaccionEditada(trans);
-    setEditIndex(index);
-  
     if (fileInputRef.current) fileInputRef.current.value = "";
-  };  
+  
+    if (formularioRef.current) {
+      formularioRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+  
   
   const actualizarTransaccion = () => {
     const nuevas = [...transacciones];
@@ -200,6 +216,7 @@ export default function Transacciones() {
     setShowModal(null);
   };
   
+
   const convertirA_base64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -209,6 +226,7 @@ export default function Transacciones() {
     });
   };
   
+
   const enviarTransaccion = async () => {
     const id_usuario = parseInt(localStorage.getItem("id_usuario"));
     if (!id_usuario) {
@@ -216,14 +234,39 @@ export default function Transacciones() {
       return;
     }
   
+    const origen = nuevaTransaccion;
     const esEdicion = editIndex !== null;
-    const origen = esEdicion ? transaccionEditada : nuevaTransaccion;
   
     const camposObligatorios = ["fecha", "monto", "categoria", "descripcion", "tipoPago"];
     const faltantes = camposObligatorios.filter((campo) => !origen[campo]);
     if (faltantes.length > 0) {
       alert("Por favor completa todos los campos obligatorios.");
       return;
+    }
+  
+    // Comprobación de límite mensual por categoría
+    const categoriaSeleccionada = categorias.find(cat => cat.nombre === origen.categoria);
+  
+    if (categoriaSeleccionada && categoriaSeleccionada.monto_limite && categoriaSeleccionada.monto_limite !== 0) {
+      const montoNuevo = parseFloat((origen.monto || "0").toString().replace(/\./g, "").replace(",", ".")) || 0;
+  
+      const transaccionesMismoMesYCategoria = transacciones.filter(t => {
+        const fechaT = new Date(t.fecha);
+        const fechaNueva = new Date(origen.fecha);
+        return (
+          t.categoria === origen.categoria &&
+          fechaT.getMonth() === fechaNueva.getMonth() &&
+          fechaT.getFullYear() === fechaNueva.getFullYear()
+        );
+      });
+  
+      const montoAcumulado = transaccionesMismoMesYCategoria.reduce((total, t) => {
+        return total + parseFloat(t.monto.toString().replace(/\./g, "").replace(",", "."));
+      }, 0);
+  
+      if ((montoAcumulado + montoNuevo) > categoriaSeleccionada.monto_limite) {
+        alert("🚨 Atención: El monto ingresado supera el límite mensual para esta categoría.");
+      }
     }
   
     let imagenBase64 = null;
@@ -237,22 +280,22 @@ export default function Transacciones() {
       ? parseFloat(origen.monto.replace(/\./g, "").replace(",", "."))
       : parseFloat(origen.monto);
   
-    const transaccionAEnviar = {
-      id_usuario,
-      tipo,
-      fecha: origen.fecha,
-      monto: montoNumerico,
-      categoria: origen.categoria,
-      descripcion: origen.descripcion,
-      tipoPago: origen.tipoPago,
-      cuotas: parseInt(origen.cuotas || 1),
-      interes: parseFloat(origen.interes || 0),
-      valorCuota: parseFloat(origen.valorCuota || 0),
-      totalCredito: parseFloat(origen.totalCredito || 0),
-      repetido: origen.repetido,
-      imagen: imagenBase64,
-      nombre_archivo: origen.imagen?.name || null
-    };
+      const transaccionAEnviar = {
+        id_usuario,
+        tipo, // 👈 Añadido aquí
+        fecha: origen.fecha,
+        monto: montoNumerico,
+        categoria: origen.categoria,
+        descripcion: origen.descripcion,
+        tipoPago: origen.tipoPago,
+        cuotas: parseInt(origen.cuotas || 1),
+        interes: parseFloat(origen.interes || 0),
+        valorCuota: parseFloat(origen.valorCuota || 0),
+        totalCredito: parseFloat(origen.totalCredito || 0),
+        repetido: origen.repetido,
+        imagen: imagenBase64,
+        nombre_archivo: origen.imagen?.name || null
+      };      
   
     try {
       if (esEdicion) {
@@ -268,22 +311,30 @@ export default function Transacciones() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(transaccionAEnviar)
         });
+  
+        // 🔥 ACTUALIZAR LOCALMENTE
+        const nuevasTransacciones = [...transacciones];
+        nuevasTransacciones[editIndex] = {
+          ...transacciones[editIndex],
+          ...transaccionAEnviar
+        };
+        setTransacciones(nuevasTransacciones);
+  
       } else {
-        await fetch("http://localhost:5000/api/transacciones", {
+        await fetch(`http://localhost:5000/api/transacciones`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(transaccionAEnviar)
         });
+  
+        const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
+        const data = await respuesta.json();
+        setTransacciones(data.filter(t => t.visible !== false));
+        setEliminadas(data.filter(t => t.visible === false));
       }
   
-      const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
-      const data = await respuesta.json();
-  
-      setTransacciones(data.filter(t => t.visible !== false));
-      setEliminadas(data.filter(t => t.visible === false));
+      // 🔵 Limpiar formulario
       setEditIndex(null);
-      setTransaccionEditada({});
-  
       setNuevaTransaccion({
         fecha: "",
         monto: "",
@@ -300,22 +351,26 @@ export default function Transacciones() {
       });
   
       if (fileInputRef.current) fileInputRef.current.value = "";
+  
     } catch (error) {
       console.error("Error al guardar transacción:", error);
       alert("❌ Error al guardar la transacción");
     }
-  };  
+  };
+  
 
   const formatearFechaBonita = (fechaISO) => {
     const [año, mes, dia] = fechaISO.split("-");
     return `${dia}-${mes}-${año}`;
   };
   
+
   const urlImagenEditada =
     transaccionEditada.imagen &&
     typeof transaccionEditada.imagen === "string"
       ? `http://localhost:5000${transaccionEditada.imagen}`
       : null;
+
 
   const eliminarTransaccion = async (id) => {
     try {
@@ -510,7 +565,7 @@ export default function Transacciones() {
         </div>
 
 
-        <div className="formulario-transaccion">
+        <div className="formulario-transaccion" ref={formularioRef}>
           <h2 className={`titulo-formulario ${tipo}`}>{tipo.toUpperCase()}</h2>
           {editIndex !== null && (
           <div className="aviso-edicion">
@@ -646,7 +701,7 @@ export default function Transacciones() {
             )}
 
             <div className="campo-imagen">
-              <label>Adjuntar imagen</label>
+            <label>Adjuntar imagen</label>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -654,36 +709,34 @@ export default function Transacciones() {
                 onChange={handleChange}
                 accept=".jpg,.jpeg,.png,.pdf,.xlsx,.xls,.csv,.doc,.docx,.txt"
               />
-              {transaccionEditada?.imagen && (
-              <div className="archivo-existente">
-                <p style={{ marginTop: "8px", fontSize: "0.9em", color: "#374151" }}>
-                  📎 Ya hay un comprobante guardado:
-                  <span style={{ display: "flex", gap: "12px", marginTop: "6px" }}>
-                  {urlImagenEditada && (
-                    <span
-                      className="link-accion"
-                      onClick={() => {
-                        setImagenModal(urlImagenEditada);
-                        setShowModalImagen(true);
-                      }}
-                    >
-                      Ver comprobante
-                    </span>
-                  )}
-                    <span
-                      className="link-accion eliminar"
-                      onClick={() => {
-                        setTransaccionEditada((prev) => ({ ...prev, imagen: null }));
-                        setNuevaTransaccion((prev) => ({ ...prev, imagen: null }));
-                      }}
-                    >
-                      Eliminar comprobante
-                    </span>
-                  </span>
-                </p>
-              </div>
-            )}
 
+              {nuevaTransaccion.imagen && typeof nuevaTransaccion.imagen === "string" && (
+                <div style={{ marginTop: "8px" }}>
+                  📎 Ya hay un comprobante guardado:
+                  <span
+                    style={{ color: "#3b82f6", cursor: "pointer", marginLeft: "8px" }}
+                    onClick={() => {
+                      const url = nuevaTransaccion.imagen.startsWith("http")
+                        ? nuevaTransaccion.imagen
+                        : `http://localhost:5000${nuevaTransaccion.imagen}`;
+                      setImagenModal(url);
+                      setShowModalImagen(true);
+                    }}
+                  >
+                    Ver comprobante
+                  </span>
+
+                  <span
+                    style={{ color: "#ef4444", cursor: "pointer", marginLeft: "20px" }}
+                    onClick={() => {
+                      setNuevaTransaccion(prev => ({ ...prev, imagen: null }));
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    ❌ Eliminar comprobante
+                  </span>
+                </div>
+              )}
             </div>
 
           </div>
@@ -751,6 +804,39 @@ export default function Transacciones() {
             />
           </div>
         </div>
+        
+        <div className="limites-categorias">
+          <h3>Control de límites por categoría (mes actual)</h3>
+          <table className="tabla-limites">
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Gasto actual</th>
+                <th>Monto límite</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categorias.map((cat, idx) => {
+                const transaccionesCategoria = transaccionesFiltradas.filter(t => t.categoria === cat.nombre);
+                const gastoActual = transaccionesCategoria.reduce((acc, t) => acc + parseFloat(t.monto.toString().replace(/\./g, "").replace(",", ".")), 0);
+                
+                return (
+                  <tr key={idx}>
+                    <td>{cat.nombre}</td>
+                    <td>${gastoActual.toLocaleString("es-CL")}</td>
+                    <td>{cat.monto_limite && cat.monto_limite !== 0 ? `$${cat.monto_limite.toLocaleString("es-CL")}` : "Sin límite"}</td>
+                    <td>
+                      {cat.monto_limite && cat.monto_limite !== 0
+                        ? (gastoActual > cat.monto_limite ? "🚨 Sobrepasado" : "✅ Dentro del límite")
+                        : "♾️"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
         <h3 className="titulo-secundario">Transacciones registradas</h3>
           <div className="lista-transacciones">
@@ -783,14 +869,22 @@ export default function Transacciones() {
               </div>
               {t.imagen && (
               <button
-                className="btn-ver-comprobante"
-                onClick={() => {
-                  setImagenModal(`http://localhost:5000${t.imagen}`);
-                  setShowModalImagen(true);
-                }}
-              >
-                Ver comprobante
-              </button>
+              className="btn-ver-comprobante"
+              onClick={() => {
+                const imagen = t.imagen;
+                if (!imagen) {
+                  alert("Esta transacción no tiene comprobante adjunto.");
+                  return;
+                }
+                const url = imagen.startsWith("http")
+                  ? imagen
+                  : `http://localhost:5000/imagenes/${imagen}`;
+                setImagenModal(url);
+                setShowModalImagen(true);
+              }}
+            >
+              Ver comprobante
+            </button>                                  
             )}
 
               <div className="acciones">
@@ -818,14 +912,22 @@ export default function Transacciones() {
                 <p><strong>Tipo de pago:</strong> {t.tipoPago}</p>
                   {t.imagen && (
                   <button
-                    className="btn-ver-comprobante"
-                    onClick={() => {
-                      setImagenModal(`http://localhost:5000${t.imagen}`);
-                      setShowModalImagen(true);
-                    }}
-                  >
-                    Ver comprobante
-                  </button>
+                  className="btn-ver-comprobante"
+                  onClick={() => {
+                    const imagen = t.imagen;
+                    if (!imagen) {
+                      alert("Esta transacción no tiene comprobante adjunto.");
+                      return;
+                    }
+                    const url = imagen.startsWith("http")
+                      ? imagen
+                      : `http://localhost:5000/imagenes/${imagen}`;
+                    setImagenModal(url);
+                    setShowModalImagen(true);
+                  }}
+                >
+                  Ver comprobante
+                </button>                
                 )}
           
                 <div className="boton-inferior">
@@ -841,8 +943,28 @@ export default function Transacciones() {
       {showModalImagen && (
       <div className="modal-overlay" onClick={() => setShowModalImagen(false)}>
         <div className="modal-imagen" onClick={(e) => e.stopPropagation()}>
-          <img src={imagenModal} alt="Comprobante" />
-          <button className="btn-cerrar-modal" onClick={() => setShowModalImagen(false)}>Cerrar</button>
+          {imagenModal ? (
+            <img
+              src={imagenModal}
+              alt="Comprobante"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.style.display = "none";
+                const fallback = document.createElement("div");
+                fallback.innerText = "No se pudo cargar el comprobante.";
+                fallback.style.padding = "1rem";
+                fallback.style.color = "#ef4444";
+                e.target.parentNode.appendChild(fallback);
+              }}
+            />
+          ) : (
+            <p style={{ padding: "1rem", color: "#ef4444" }}>
+              No hay comprobante disponible.
+            </p>
+          )}
+          <button className="btn-cerrar-modal" onClick={() => setShowModalImagen(false)}>
+            Cerrar
+          </button>
         </div>
       </div>
     )}

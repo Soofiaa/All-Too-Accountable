@@ -54,7 +54,7 @@ export default function PagosPendientes() {
     <div className="page-layout">
       <Header />
       <div className="pagos-pendientes-container">
-        <h2 className="titulo-pp">Pagos pendientes con tarjeta de crédito</h2>
+        <h2 className="titulo-pp">Gestión de pagos pendientes con tarjeta de crédito</h2>
         
         <div className="contenido-tabla">
           {pagosPendientes.length === 0 ? (

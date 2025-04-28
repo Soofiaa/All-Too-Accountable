@@ -75,7 +75,9 @@
   }
   
   .dashboard-salario h3,
-  .dashboard-ahorros h3 {
+  .dashboard-ahorros h3,
+  .dashboard-dia-facturacion h3,
+  .dashboard-profile h3 {
     margin-bottom: 0.5rem;
     color: #1e40af;
   }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./inicio.css";
 import { Line } from "react-chartjs-2";
 import {
@@ -13,7 +13,6 @@ import {
 } from "chart.js";
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
-import { useEffect } from "react";
 import axios from "axios";
 
 ChartJS.register(
@@ -40,7 +39,11 @@ export default function DashboardFinanciero() {
   const [nombreUsuario, setNombreUsuario] = useState("Usuario");
   const [nuevoNombreUsuario, setNuevoNombreUsuario] = useState("");
   const [mostrarModalNombre, setMostrarModalNombre] = useState(false);
-
+  const [transacciones, setTransacciones] = useState([]);
+  const [modoGrafico, setModoGrafico] = useState("mensual"); // "mensual" o "anual"
+  const [datosGrafico, setDatosGrafico] = useState([]);
+  const [saldoAcumulado, setSaldoAcumulado] = useState([]);
+  const [gastosMensuales, setGastosMensuales] = useState([]);
 
   useEffect(() => {
     const usuarioStr = localStorage.getItem("usuario");
@@ -65,25 +68,131 @@ export default function DashboardFinanciero() {
   }, []);   
 
 
-  const data = {
-    labels: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"],
-    datasets: [
-      {
-        label: "Ingresos",
-        data: [1200000, 1250000, 1300000, 1280000, 1350000, 1400000],
-        borderColor: "#10b981",
-        backgroundColor: "rgba(16,185,129,0.2)",
-        tension: 0.3,
-      },
-      {
-        label: "Gastos",
-        data: [900000, 950000, 1000000, 980000, 990000, 1010000],
-        borderColor: "#ef4444",
-        backgroundColor: "rgba(239,68,68,0.2)",
-        tension: 0.3,
-      },
-    ],
-  };
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) {
+      console.error("ID de usuario no encontrado en localStorage");
+      return;
+    }
+  
+    fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
+      .then(res => res.json())
+      .then(data => {
+        setTransacciones(data);
+        verificarYDepositarSalario(data);
+      })
+      .catch(error => console.error("Error al cargar transacciones:", error));
+  }, []);
+
+
+  useEffect(() => {
+    if (!transacciones.length) return;
+  
+    const ahora = new Date();
+    const mesActual = ahora.getMonth(); // 0-indexed
+    const anioActual = ahora.getFullYear();
+  
+    const agrupados = {};
+  
+    transacciones
+      .filter(t => t.visible !== false) // Solo visibles
+      .forEach((t) => {
+        const fecha = new Date(t.fecha);
+        let clave;
+  
+        if (modoGrafico === "mensual") {
+          if (fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual) {
+            clave = fecha.getDate().toString().padStart(2, "0") + "-" + (fecha.getMonth() + 1).toString().padStart(2, "0");
+          }
+        } else {
+          clave = (fecha.getMonth() + 1).toString().padStart(2, "0") + "-" + fecha.getFullYear();
+        }
+  
+        if (clave) {
+          if (!agrupados[clave]) {
+            agrupados[clave] = { ingreso: 0, gasto: 0 };
+          }
+  
+          if (t.tipo === "ingreso") {
+            agrupados[clave].ingreso += parseFloat(t.monto);
+          } else {
+            agrupados[clave].gasto += parseFloat(t.monto);
+          }
+        }
+      });
+  
+    let datos = [];
+  
+    if (modoGrafico === "mensual") {
+      const diasEnMes = new Date(anioActual, mesActual + 1, 0).getDate();
+  
+      for (let dia = 1; dia <= diasEnMes; dia++) {
+        const clave = dia.toString().padStart(2, "0") + "-" + (mesActual + 1).toString().padStart(2, "0");
+  
+        datos.push({
+          fecha: clave,
+          ingreso: agrupados[clave]?.ingreso || 0,
+          gasto: agrupados[clave]?.gasto || 0,
+        });
+      }
+  
+      // agregamos el salario el día 1
+      if (datos.length > 0) {
+        datos[0].ingreso += salario; //  sumamos el salario guardado
+      }
+    } else {
+      datos = Object.entries(agrupados)
+        .sort(([fechaA], [fechaB]) => fechaA.localeCompare(fechaB))
+        .map(([fecha, valores]) => ({
+          fecha,
+          ingreso: valores.ingreso,
+          gasto: valores.gasto,
+        }));
+  
+      // agregamos salario al mes si se está en modo anual
+      if (datos.length > 0) {
+        datos[0].ingreso += salario;
+      }
+    }
+  
+    setDatosGrafico(datos);
+  }, [transacciones, modoGrafico, salario]);   
+
+
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (id_usuario) {
+      fetch(`http://localhost:5000/api/gastos_mensuales/${id_usuario}`)
+        .then(res => res.json())
+        .then(data => {
+          const gastosFormateados = data.map(gasto => ({
+            ...gasto,
+            dia_pago: parseInt(gasto.dia_pago)
+          }));
+          setGastosMensuales(gastosFormateados);
+        })
+        .catch(error => console.error("Error al cargar gastos mensuales:", error));
+    }
+  }, []);  
+
+
+  useEffect(() => {
+    if (!datosGrafico.length) return;
+
+    const nuevoSaldoAcumulado = [];
+    let saldo = 0;
+
+    datosGrafico.forEach((d) => {
+      const [dia, mes] = d.fecha.split("-").map(x => parseInt(x));
+      const gastosFijosHoy = gastosMensuales.filter(gasto => parseInt(gasto.dia_pago) === dia);
+      const totalGastosFijosHoy = gastosFijosHoy.reduce((acc, gasto) => acc + Number(gasto.monto), 0);
+      saldo += (d.ingreso - d.gasto - totalGastosFijosHoy);
+      nuevoSaldoAcumulado.push(saldo);
+    });
+
+    setSaldoAcumulado(nuevoSaldoAcumulado);
+  }, [datosGrafico, gastosMensuales]);
+
 
   const options = {
     responsive: true,
@@ -92,6 +201,7 @@ export default function DashboardFinanciero() {
       title: { display: true, text: "Ingresos vs Gastos (Mensual)" },
     },
   };
+
 
   const handleActualizarNombre = () => {
     const id_usuario = localStorage.getItem("id_usuario");
@@ -116,6 +226,7 @@ export default function DashboardFinanciero() {
     }
   };  
   
+
   const handleActualizarFacturacion = () => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (nuevoDiaFacturacion && id_usuario) {
@@ -134,6 +245,7 @@ export default function DashboardFinanciero() {
     }
   };
   
+
   const handleSave = () => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (nuevoSalario && id_usuario) {
@@ -153,6 +265,7 @@ export default function DashboardFinanciero() {
       });
     }
   };  
+
 
   const handleAgregarAhorro = () => {
     const id_usuario = localStorage.getItem("id_usuario");
@@ -176,6 +289,7 @@ export default function DashboardFinanciero() {
     }
   };  
 
+
   const handleQuitarAhorro = () => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (montoAhorro !== "" && id_usuario) {
@@ -197,6 +311,98 @@ export default function DashboardFinanciero() {
       });
     }
   };
+
+  
+  const verificarYDepositarSalario = (transaccionesExistentes) => {
+    const salarioGuardado = parseFloat(localStorage.getItem("salario")) || 0;
+    const id_usuario = localStorage.getItem("id_usuario");
+  
+    if (!id_usuario || salarioGuardado === 0) return;
+  
+    const ahora = new Date();
+    const diaHoy = ahora.getDate(); // 1, 2, 3, ...
+    const mesActual = ahora.getMonth() + 1; // Enero = 0
+    const anioActual = ahora.getFullYear();
+  
+    // Solo intentamos depositar si es día 1
+    if (diaHoy !== 1) {
+      console.log("⏳ Hoy no es día de depósito automático (solo el día 1)");
+      return;
+    }
+  
+    const salarioYaDepositado = transaccionesExistentes.some(t => {
+      const fecha = new Date(t.fecha);
+      return (
+        t.descripcion === "Depósito de salario" &&
+        fecha.getMonth() + 1 === mesActual &&
+        fecha.getFullYear() === anioActual
+      );
+    });
+  
+    if (!salarioYaDepositado) {
+      const nuevoIngreso = {
+        id_usuario: parseInt(id_usuario),
+        tipo: "ingreso",
+        fecha: `${anioActual}-${String(mesActual).padStart(2, "0")}-01`,
+        monto: salarioGuardado,
+        categoria: "Salario",
+        descripcion: "Depósito de salario",
+        tipoPago: "transferencia",
+        cuotas: 1,
+        interes: 0,
+        valorCuota: 0,
+        totalCredito: 0,
+        repetido: false,
+        imagen: null,
+        nombre_archivo: null
+      };
+  
+      fetch("http://localhost:5000/api/transacciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nuevoIngreso)
+      })
+      .then(res => res.json())
+      .then(() => {
+        console.log("💸 Salario depositado automáticamente.");
+        // 🚨 AQUÍ HACEMOS ESTO:
+        // Volvemos a pedir transacciones actualizadas
+        fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
+          .then(res => res.json())
+          .then(data => {
+            setTransacciones(data);
+          })
+          .catch(error => console.error("Error al refrescar transacciones:", error));
+      })
+      .catch(error => console.error("Error al depositar salario:", error));
+    } else {
+      console.log("✅ El salario de este mes ya fue depositado.");
+    }
+  };  
+
+
+  const maxValor = Math.max(
+    ...datosGrafico.map((d) => Math.max(d.ingreso, d.gasto)),
+    1000 // Valor mínimo
+  );
+
+
+  let saldo = 0;
+
+  datosGrafico.forEach((d) => {
+    const [dia, mes] = d.fecha.split("-").map(x => parseInt(x));
+
+    // 🛠 Buscar gastos mensuales que deben cobrarse hoy
+    const gastosFijosHoy = gastosMensuales.filter(gasto => {
+      return parseInt(gasto.dia_pago) === dia;
+    });
+
+    const totalGastosFijosHoy = gastosFijosHoy.reduce((acc, gasto) => acc + Number(gasto.monto), 0);
+
+    // 🛠 Calcular saldo final de hoy
+    saldo += (d.ingreso - d.gasto - totalGastosFijosHoy);
+    saldoAcumulado.push(saldo);
+  });
 
 
   return (
@@ -261,10 +467,111 @@ export default function DashboardFinanciero() {
           <button className="dashboard-chatbot">Hablar con una inteligencia artificial</button>
         </aside>
 
-        <section className="dashboard-grafico">
-          <h3>Gráfico financiero anual (Ingresos - Gastos)</h3>
-          <Line data={data} options={options} />
-        </section>
+        <div className="dashboard-grafico">
+          <div style={{ overflowX: "auto", width: "100%" }}>
+            <div style={{ minWidth: "1200px", height: "400px" }}>
+              <Line
+                data={{
+                  labels: datosGrafico.map((d) => d.fecha),
+                  datasets: [
+                    {
+                      label: "Saldo acumulado",
+                      data: saldoAcumulado,
+                      borderColor: "#10b981",
+                      backgroundColor: "rgba(16, 185, 129, 0.2)",
+                      tension: 0.4,
+                      segment: {
+                        borderColor: ctx => {
+                          const { p0, p1 } = ctx;
+                          if (p1.parsed.y < p0.parsed.y) {
+                            return "#ef4444"; // 🔴 Rojo si baja
+                          } else {
+                            return "#10b981"; // 🟢 Verde si sube o se mantiene
+                          }
+                        }
+                      },
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: "top",
+                    },
+                    tooltip: {
+                      backgroundColor: function(context) {
+                        const index = context.tooltip.dataPoints[0].dataIndex;
+                        const saldo = context.tooltip.dataPoints[0].parsed.y;
+                        if (index === 0) return "#10b981"; // El primer día siempre verde
+                        const saldoAnterior = context.tooltip.dataPoints[0].dataset.data[index - 1];
+                
+                        return saldo >= saldoAnterior ? "#10b981" : "#ef4444";
+                      },
+                      borderColor: function(context) {
+                        const index = context.tooltip.dataPoints[0].dataIndex;
+                        const saldo = context.tooltip.dataPoints[0].parsed.y;
+                        if (index === 0) return "#10b981";
+                        const saldoAnterior = context.tooltip.dataPoints[0].dataset.data[index - 1];
+                
+                        return saldo >= saldoAnterior ? "#10b981" : "#ef4444";
+                      },
+                      callbacks: {
+                        label: function(context) {
+                          const index = context.dataIndex;
+                          const saldo = context.dataset.data[index];
+                          const fechaLabel = datosGrafico[index]?.fecha;
+                        
+                          let detalles = [];
+                        
+                          // Buscar transacciones normales del día
+                          const transaccionesDelDia = transacciones.filter(t => {
+                            const fechaT = new Date(t.fecha);
+                            const dia = fechaT.getDate().toString().padStart(2, "0");
+                            const mes = (fechaT.getMonth() + 1).toString().padStart(2, "0");
+                            const formato = `${dia}-${mes}`;
+                            return formato === fechaLabel;
+                          });
+                        
+                          transaccionesDelDia.forEach(t => {
+                            if (t.tipo === "ingreso") {
+                              detalles.push(`+$${Number(t.monto).toLocaleString("es-CL")} → (${t.descripcion})`);
+                            } else if (t.tipo === "gasto") {
+                              detalles.push(`-$${Number(t.monto).toLocaleString("es-CL")} → (${t.descripcion})`);
+                            }
+                          });
+                        
+                          // Buscar gastos mensuales del día
+                          const diaActual = parseInt(fechaLabel.split("-")[0]);
+                          const gastosFijosHoy = gastosMensuales.filter(g => parseInt(g.dia_pago) === diaActual);
+                        
+                          gastosFijosHoy.forEach(gm => {
+                            detalles.push(`-$${Number(gm.monto).toLocaleString("es-CL")} → (${gm.nombre})`);
+                          });
+                        
+                          // Retornar saldo y luego todos los detalles encontrados
+                          return [`Saldo: $${Number(saldo).toLocaleString("es-CL")}`, ...detalles];
+                        }                                                                  
+                      }                      
+                    }
+                  },
+                  scales: {
+                    x: {
+                      ticks: {
+                        autoSkip: false,
+                      },
+                    },
+                    y: {
+                      beginAtZero: true,
+                    },
+                  },
+                }}                              
+              />
+            </div>
+          </div>
+        </div>
+
       </main>
       <Footer />
 
