@@ -44,6 +44,30 @@ export default function DashboardFinanciero() {
   const [datosGrafico, setDatosGrafico] = useState([]);
   const [saldoAcumulado, setSaldoAcumulado] = useState([]);
   const [gastosMensuales, setGastosMensuales] = useState([]);
+  const [movimientosAhorro, setMovimientosAhorro] = useState([]);
+  const [evolucionAhorro, setEvolucionAhorro] = useState([]);
+  const balanceReal = saldoAcumulado.length > 0 ? saldoAcumulado[saldoAcumulado.length - 1] : 0;
+  const [consejos, setConsejos] = useState([]);
+  const [animando, setAnimando] = useState(false);
+  const [consejoActual, setConsejoActual] = useState(0);
+  const [metas, setMetas] = useState([]);
+  const [showChatBot, setShowChatBot] = useState(false);
+  const [mensajeIA, setMensajeIA] = useState("");
+  const [mensajesIA, setMensajesIA] = useState([
+    { role: "assistant", content: "Hola 👋 Soy tu asistente financiero. ¿En qué puedo ayudarte hoy?" }
+  ]);
+  const [cargandoIA, setCargandoIA] = useState(false);
+  const [chatMensajes, setChatMensajes] = useState([]);
+
+
+
+  useEffect(() => {
+    fetch("/consejos.json")
+      .then(res => res.json())
+      .then(data => setConsejos(data))
+      .catch(err => console.error("Error al cargar consejos:", err));
+  }, []);  
+
 
   useEffect(() => {
     const usuarioStr = localStorage.getItem("usuario");
@@ -80,6 +104,7 @@ export default function DashboardFinanciero() {
       .then(data => {
         setTransacciones(data);
         verificarYDepositarSalario(data);
+        registrarSaldoSobranteSiCorresponde();
       })
       .catch(error => console.error("Error al cargar transacciones:", error));
   }, []);
@@ -116,8 +141,11 @@ export default function DashboardFinanciero() {
           if (t.tipo === "ingreso") {
             agrupados[clave].ingreso += parseFloat(t.monto);
           } else {
-            agrupados[clave].gasto += parseFloat(t.monto);
-          }
+            // ❌ Excluir gastos a crédito en cuotas del gráfico
+            if (!(t.tipoPago === "credito" && parseInt(t.cuotas) > 1)) {
+              agrupados[clave].gasto += parseFloat(t.monto);
+            }
+          }          
         }
       });
   
@@ -162,7 +190,7 @@ export default function DashboardFinanciero() {
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (id_usuario) {
-      fetch(`http://localhost:5000/api/gastos_mensuales/${id_usuario}`)
+      fetch(`http://localhost:5000/api/gastos?id_usuario=${id_usuario}`)
         .then(res => res.json())
         .then(data => {
           const gastosFormateados = data.map(gasto => ({
@@ -194,6 +222,64 @@ export default function DashboardFinanciero() {
   }, [datosGrafico, gastosMensuales]);
 
 
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+  
+    fetch(`http://localhost:5000/api/movimientos_ahorro?id_usuario=${id_usuario}`)
+      .then(res => res.json())
+      .then(data => {
+        setMovimientosAhorro(data);
+      })
+      .catch(err => console.error("Error al cargar movimientos de ahorro:", err));
+  }, []);
+
+
+  useEffect(() => {
+    if (!datosGrafico.length || !movimientosAhorro.length) return;
+  
+    const acumuladoPorDia = [];
+    let acumulado = 0;
+  
+    datosGrafico.forEach(d => {
+      const [dia, mes] = d.fecha.split("-").map(Number);
+      const fechaActual = new Date();
+      fechaActual.setDate(dia);
+      fechaActual.setMonth(mes - 1);
+  
+      const movimientosDelDia = movimientosAhorro.filter(mov => {
+        const fechaMov = new Date(mov.fecha);
+        return (
+          fechaMov.getDate() === dia &&
+          fechaMov.getMonth() + 1 === mes
+        );
+      });
+  
+      movimientosDelDia.forEach(m => {
+        acumulado += m.tipo === "agregar" ? m.monto : -m.monto;
+      });
+  
+      acumuladoPorDia.push(acumulado);
+    });
+  
+    setEvolucionAhorro(acumuladoPorDia);
+  }, [datosGrafico, movimientosAhorro]);
+
+
+  useEffect(() => {
+    const usuarioStr = localStorage.getItem("usuario");
+    if (!usuarioStr) return;
+
+    const usuario = JSON.parse(usuarioStr);
+    const id_usuario = usuario.id;
+
+    fetch(`http://localhost:5000/api/metas/${id_usuario}`)
+      .then(res => res.json())
+      .then(data => setMetas(data))
+      .catch(err => console.error("Error al cargar metas:", err));
+  }, []);
+
+  
   const options = {
     responsive: true,
     plugins: {
@@ -202,6 +288,11 @@ export default function DashboardFinanciero() {
     },
   };
 
+
+  const totalAhorros = movimientosAhorro.reduce((acc, mov) => {
+    return acc + (mov.tipo === "agregar" ? mov.monto : -mov.monto);
+  }, 0);
+  
 
   const handleActualizarNombre = () => {
     const id_usuario = localStorage.getItem("id_usuario");
@@ -271,14 +362,20 @@ export default function DashboardFinanciero() {
     const id_usuario = localStorage.getItem("id_usuario");
     if (montoAhorro !== "" && id_usuario) {
       const valor = parseInt(montoAhorro.replace(/\./g, ""));
-      const nuevo = ahorros + valor;
-
-      axios.post("http://localhost:5000/api/actualizar_ahorros", {
+  
+      axios.post("http://localhost:5000/api/movimientos_ahorro", {
         id_usuario: parseInt(id_usuario),
-        ahorros: nuevo
+        tipo: "agregar",
+        monto: valor,
+        fecha: new Date().toISOString().split("T")[0]
       })
       .then(() => {
-        setAhorros(nuevo);
+        // volver a cargar la lista de movimientos para actualizar el gráfico
+        return fetch(`http://localhost:5000/api/movimientos_ahorro?id_usuario=${id_usuario}`);
+      })
+      .then(res => res.json())
+      .then(data => {
+        setMovimientosAhorro(data);
         setShowAgregarAhorro(false);
         setMontoAhorro("");
       })
@@ -294,23 +391,28 @@ export default function DashboardFinanciero() {
     const id_usuario = localStorage.getItem("id_usuario");
     if (montoAhorro !== "" && id_usuario) {
       const valor = parseInt(montoAhorro.replace(/\./g, ""));
-      const nuevo = Math.max(0, ahorros - valor);
-
-      axios.post("http://localhost:5000/api/actualizar_ahorros", {
+  
+      axios.post("http://localhost:5000/api/movimientos_ahorro", {
         id_usuario: parseInt(id_usuario),
-        ahorros: nuevo
+        tipo: "quitar",
+        monto: valor,
+        fecha: new Date().toISOString().split("T")[0]
       })
       .then(() => {
-        setAhorros(nuevo);
+        return fetch(`http://localhost:5000/api/movimientos_ahorro?id_usuario=${id_usuario}`);
+      })
+      .then(res => res.json())
+      .then(data => {
+        setMovimientosAhorro(data);
         setShowQuitarAhorro(false);
         setMontoAhorro("");
       })
       .catch(err => {
-        console.error("Error al descontar ahorro:", err);
+        console.error("Error al quitar ahorro:", err);
         alert("No se pudo descontar el monto.");
       });
     }
-  };
+  };  
 
   
   const verificarYDepositarSalario = (transaccionesExistentes) => {
@@ -381,28 +483,67 @@ export default function DashboardFinanciero() {
   };  
 
 
+  const registrarSaldoSobranteSiCorresponde = () => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario || saldoAcumulado.length === 0) return;
+  
+    const ahora = new Date();
+    const esDiaUno = ahora.getDate() === 1;
+  
+    if (!esDiaUno) return;
+  
+    const transaccionYaExiste = transacciones.some(t => {
+      return t.descripcion === "Saldo restante del mes anterior" &&
+             new Date(t.fecha).getMonth() === ahora.getMonth() &&
+             new Date(t.fecha).getFullYear() === ahora.getFullYear();
+    });
+  
+    if (!transaccionYaExiste) {
+      const montoRestante = saldoAcumulado[saldoAcumulado.length - 1];
+  
+      if (montoRestante > 0) {
+        const nueva = {
+          id_usuario: parseInt(id_usuario),
+          tipo: "ingreso",
+          fecha: ahora.toISOString().split("T")[0],
+          monto: montoRestante,
+          categoria: "Saldo",
+          descripcion: "Saldo restante del mes anterior",
+          tipoPago: "automático",
+          cuotas: 1,
+          interes: 0,
+          valorCuota: 0,
+          totalCredito: 0,
+          repetido: false,
+          imagen: null,
+          nombre_archivo: null,
+          visible: true, // 👈 se muestra
+          protegida: true // 👈 clave para frontend (no editable/eliminable)
+        };
+  
+        fetch("http://localhost:5000/api/transacciones", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nueva)
+        })
+        .then(res => res.json())
+        .then(() => {
+          console.log("✅ Saldo restante del mes anterior registrado.");
+          // refrescar transacciones
+          fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
+            .then(res => res.json())
+            .then(setTransacciones);
+        })
+        .catch(err => console.error("❌ Error al registrar saldo restante:", err));
+      }
+    }
+  };
+  
+
   const maxValor = Math.max(
     ...datosGrafico.map((d) => Math.max(d.ingreso, d.gasto)),
     1000 // Valor mínimo
   );
-
-
-  let saldo = 0;
-
-  datosGrafico.forEach((d) => {
-    const [dia, mes] = d.fecha.split("-").map(x => parseInt(x));
-
-    // 🛠 Buscar gastos mensuales que deben cobrarse hoy
-    const gastosFijosHoy = gastosMensuales.filter(gasto => {
-      return parseInt(gasto.dia_pago) === dia;
-    });
-
-    const totalGastosFijosHoy = gastosFijosHoy.reduce((acc, gasto) => acc + Number(gasto.monto), 0);
-
-    // 🛠 Calcular saldo final de hoy
-    saldo += (d.ingreso - d.gasto - totalGastosFijosHoy);
-    saldoAcumulado.push(saldo);
-  });
 
 
   return (
@@ -411,6 +552,7 @@ export default function DashboardFinanciero() {
     <div className="dashboard-container">
       <main className="dashboard-main">
         <aside className="dashboard-sidebar">
+
 
           <div className="dashboard-profile dashboard-card">
             <h3 className="dashboard-nombre">Bienvenido, {nombreUsuario}</h3>
@@ -437,6 +579,53 @@ export default function DashboardFinanciero() {
             )}
           </div>
 
+          <div className="dashboard-consejo-profesional dashboard-card">
+            <div className={`consejo-slide ${animando ? "animando" : ""}`}>
+              <p className="texto-consejo">{consejos[consejoActual]}</p>
+            </div>
+            <div className="controles-consejo">
+            <button
+              className="consejo-btn"
+              onClick={() => {
+                setAnimando(true);
+                setTimeout(() => {
+                  setConsejoActual((prev) => (prev - 1 + consejos.length) % consejos.length);
+                  setAnimando(false);
+                }, 300);
+              }}
+            >
+              ←
+            </button>
+            <button
+              className="consejo-btn"
+              onClick={() => {
+                setAnimando(true);
+                setTimeout(() => {
+                  setConsejoActual((prev) => (prev + 1) % consejos.length);
+                  setAnimando(false);
+                }, 300);
+              }}
+            >
+              →
+            </button>
+            </div>
+          </div>
+
+
+          <div style={{
+          backgroundColor: "white",
+          borderRadius: "1rem",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+          padding: "1.5rem",
+          marginBottom: "1rem",
+          textAlign: "center"
+        }}>
+          <h3 style={{ color: "#1e40af", marginBottom: "0.5rem" }}>Balance del mes</h3>
+          <div className="dashboard-box" style={{ fontSize: "1.2rem", display: "inline-block" }}>
+            ${Number(balanceReal || 0).toLocaleString("es-CL")}
+          </div>
+        </div>
+
           <div className="dashboard-dia-facturacion dashboard-card">
             <h3>Día de facturación</h3>
             <div className="dashboard-box">Día {diaFacturacion}</div>
@@ -445,18 +634,10 @@ export default function DashboardFinanciero() {
             </button>
           </div>
 
-          <div className="dashboard-salario">
-            <h3>Salario</h3>
-            <div className="dashboard-box">
-              ${Number(salario).toLocaleString("es-CL", { minimumFractionDigits: 0 })}
-            </div>
-            <button className="center-button" onClick={() => setShowModal(true)}>Editar salario</button>
-          </div>
-
           <div className="dashboard-ahorros">
             <h3>Ahorros</h3>
             <div className="dashboard-box">
-              ${Number(ahorros).toLocaleString("es-CL", { minimumFractionDigits: 0 })}
+              ${Number(totalAhorros || 0).toLocaleString("es-CL", { minimumFractionDigits: 0 })}
             </div>
             <div className="dashboard-ahorro-btns">
               <button className="center-button" onClick={() => setShowAgregarAhorro(true)}>Añadir monto</button>
@@ -464,10 +645,24 @@ export default function DashboardFinanciero() {
             </div>
           </div>
 
-          <button className="dashboard-chatbot">Hablar con una inteligencia artificial</button>
+          <button className="chatbot-fab" onClick={() => setShowChatBot(!showChatBot)}>
+            🤖
+          </button>
+
+
         </aside>
+        
 
         <div className="dashboard-grafico">
+
+        <div className="dashboard-salario-banner">
+          <div className="salario-banner-contenido">
+            <span className="salario-label">Salario:</span>
+            <span className="salario-cifra">${Number(salario).toLocaleString("es-CL", { minimumFractionDigits: 0 })}</span>
+            <button className="editar-salario" onClick={() => setShowModal(true)}>Editar</button>
+          </div>
+        </div>
+
           <div style={{ overflowX: "auto", width: "100%" }}>
             <div style={{ minWidth: "1200px", height: "400px" }}>
               <Line
@@ -570,9 +765,81 @@ export default function DashboardFinanciero() {
               />
             </div>
           </div>
+
+          <div style={{ width: "100%", padding: "30px 0", backgroundColor: "white" }}>
+            <div style={{ width: "90%", margin: "0 auto", maxWidth: "1200px", height: "300px" }}>
+              <Line
+                data={{
+                  labels: datosGrafico.map((d) => d.fecha),
+                  datasets: [
+                    {
+                      label: "Evolución de Ahorros",
+                      data: evolucionAhorro,
+                      borderColor: "#3b82f6",
+                      backgroundColor: "rgba(59, 130, 246, 0.2)",
+                      tension: 0.3,
+                      pointRadius: 2,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { position: "top" },
+                    title: { display: true, text: "Historial de Ahorros" },
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      min: 0,
+                      max: Math.max(100000, ...evolucionAhorro)
+                    },
+                  },                                    
+                }}
+              />
+            </div>
+          </div>
+
+          {metas.length > 0 && (
+            <div className="dashboard-card" style={{ marginTop: "2rem" }}>
+              <h3 style={{ color: "#1e40af", marginBottom: "1rem" }}>Progreso de tus metas</h3>
+              {metas.map((meta) => {
+                const porcentaje = Math.min((totalAhorros / meta.monto_meta) * 100, 100);
+                const faltante = meta.monto_meta - totalAhorros;
+
+                return (
+                  <div key={meta.id_meta} style={{ marginBottom: "1.5rem" }}>
+                    <h4 style={{ fontWeight: 600, marginBottom: "0.25rem" }}>{meta.titulo}</h4>
+                    <p style={{ fontSize: "0.9rem", margin: 0 }}>
+                      Necesitas: ${meta.monto_meta.toLocaleString("es-CL")} &nbsp;|&nbsp;
+                      Llevas: ${Math.min(totalAhorros, meta.monto_meta).toLocaleString("es-CL")} &nbsp;|&nbsp;
+                      Faltan: ${Math.max(faltante, 0).toLocaleString("es-CL")}
+                    </p>
+                    <div style={{
+                      backgroundColor: "#e5e7eb",
+                      borderRadius: "1rem",
+                      overflow: "hidden",
+                      marginTop: "0.5rem",
+                      height: "12px"
+                    }}>
+                      <div style={{
+                        width: `${porcentaje}%`,
+                        backgroundColor: "#2563eb",
+                        height: "100%",
+                        transition: "width 0.3s ease"
+                      }}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
         </div>
 
-      </main>
+      </main>  
+
       <Footer />
 
       {showModal && (
@@ -628,6 +895,68 @@ export default function DashboardFinanciero() {
         </div>
       )}
     </div>
+
+    {showChatBot && (
+      <div className="chatbot-burbuja">
+        <div className="chat-header">🤖 FinAI – Tu asistente de finanzas</div>
+        <div className="chat-mensajes">
+          {mensajesIA.map((msg, index) => (
+            <div
+              key={index}
+              className={msg.role === "user" ? "msg-user" : "msg-ia"}
+            >
+              {msg.content}
+            </div>
+          ))}
+        </div>
+        <div className="chat-footer">
+          <textarea
+            rows="2"
+            placeholder="Escribe tu pregunta..."
+            value={mensajeIA}
+            onChange={(e) => setMensajeIA(e.target.value)}
+          ></textarea>
+          <button onClick={async () => {
+            const nuevoMensaje = { role: "user", content: mensajeIA };
+            const nuevosMensajes = [...mensajesIA, nuevoMensaje];
+            setMensajesIA(nuevosMensajes);
+            setMensajeIA("");
+            setCargandoIA(true);
+
+            const resumen = `
+              Saldo: $${Number(balanceReal).toLocaleString("es-CL")}, 
+              Ahorros: $${Number(totalAhorros).toLocaleString("es-CL")}, 
+              Día de facturación: ${diaFacturacion}, 
+              Metas: ${metas.map(m => `${m.titulo} ($${m.monto_meta})`).join(", ")},
+              Últimas transacciones: ${transacciones.slice(-5).map(t => `${t.tipo} por $${t.monto} (${t.descripcion})`).join("; ")}.
+            `;
+
+            try {
+              const res = await fetch("http://localhost:5000/api/chat_ia", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contexto: resumen,
+                  historial: nuevosMensajes
+                })
+              });
+              const data = await res.json();
+              const respuesta = {
+                role: "assistant",
+                content: data.respuesta || "Lo siento, no entendí la pregunta."
+              };
+              setMensajesIA([...nuevosMensajes, respuesta]);
+            } catch (err) {
+              setMensajesIA([...nuevosMensajes, { role: "assistant", content: "Error al contactar a la IA." }]);
+            }
+            setCargandoIA(false);
+          }}>
+            Enviar
+          </button>
+        </div>
+      </div>
+    )}
+
     {mostrarModalFacturacion && (
   <div className="modal-overlay">
     <div className="modal-box">

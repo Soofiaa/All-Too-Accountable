@@ -63,7 +63,6 @@
     font-size: 0.875rem;
   }
   
-  .dashboard-salario,
   .dashboard-ahorros {
     background-color: white;
     padding: 1.5rem;
@@ -242,4 +241,279 @@
   flex-direction: column;
   align-items: center; /* Centra horizontalmente */
   justify-content: center; /* Centra verticalmente si es necesario */
+}
+
+.dashboard-consejo-profesional {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.consejo-slide {
+  transition: all 0.3s ease;
+  min-height: 3rem;
+}
+
+.consejo-slide.animando {
+  transform: translateX(-10px);
+  opacity: 0.6;
+}
+
+.dashboard-consejo-profesional {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.consejo-slide {
+  transition: all 0.3s ease;
+  min-height: 3rem;
+}
+
+.consejo-slide.animando {
+  transform: translateX(-10px);
+  opacity: 0.6;
+}
+
+.texto-consejo {
+  font-size: 1.1rem;
+  color: #334155; /* gris azulado sobrio */
+  font-family: "Georgia", "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.8;
+  padding: 0 0.5rem;
+}
+
+.controles-consejo {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.consejo-btn {
+  border: none;
+  background-color: #f3f4f6;
+  color: #1e3a8a;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.consejo-btn:hover {
+  background-color: #e0e7ff;
+  transform: scale(1.1);
+}
+
+.controles-consejo {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.consejo-btn {
+  border: none;
+  background-color: #f3f4f6;
+  color: #1e3a8a;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.consejo-btn:hover {
+  background-color: #e0e7ff;
+  transform: scale(1.1);
+}
+
+.dashboard-salario-banner {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.salario-banner-contenido {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.salario-label {
+  font-weight: 600;
+  color: #1e40af;
+  font-size: 1rem;
+}
+
+.salario-cifra {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #111827;
+}
+
+.editar-salario {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.editar-salario:hover {
+  background-color: #1e40af;
+}
+
+.msg-user {
+  background-color: #dbeafe;
+  color: #1e3a8a;
+  padding: 0.6rem;
+  border-radius: 1rem 1rem 0 1rem;
+  margin: 0.5rem 0;
+  align-self: flex-end;
+  max-width: 80%;
+  white-space: pre-wrap;
+}
+
+.msg-ia {
+  background-color: #f3f4f6;
+  color: #111827;
+  padding: 0.6rem;
+  border-radius: 1rem 1rem 1rem 0;
+  margin: 0.5rem 0;
+  align-self: flex-start;
+  max-width: 80%;
+  white-space: pre-wrap;
+}
+
+.chat-mensajes {
+  padding: 1rem;
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.chatbot-fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 1000;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.chatbot-fab:hover {
+  background: #1e3a8a;
+  transform: scale(1.05);
+}
+
+.chatbot-burbuja {
+  position: fixed;
+  bottom: 5.5rem;
+  right: 1.5rem;
+  width: 320px;
+  max-height: 400px;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatbot-burbuja textarea {
+  width: 100%;
+  resize: none;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  outline: none;
+}
+.chatbot-burbuja .chat-header {
+  padding: 1rem;
+  background: #1e40af;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+}
+.chatbot-burbuja .chat-mensajes {
+  padding: 1rem;
+  flex-grow: 1;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+.chatbot-burbuja .chat-footer {
+  padding: 0.5rem;
+  text-align: right;
+  border-top: 1px solid #e5e7eb;
+}
+.chatbot-burbuja button {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.chatbot-burbuja button:hover {
+  background-color: #1e3a8a;
+}
+
+.msg-user {
+  background-color: #dbeafe;
+  color: #1e3a8a;
+  padding: 0.6rem;
+  border-radius: 1rem 1rem 0 1rem;
+  margin: 0.5rem 0;
+  align-self: flex-end;
+  max-width: 80%;
+  white-space: pre-wrap;
+}
+
+.msg-ia {
+  background-color: #f3f4f6;
+  color: #111827;
+  padding: 0.6rem;
+  border-radius: 1rem 1rem 1rem 0;
+  margin: 0.5rem 0;
+  align-self: flex-start;
+  max-width: 80%;
+  white-space: pre-wrap;
+}
+
+.chat-mensajes {
+  padding: 1rem;
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }

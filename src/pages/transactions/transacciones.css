@@ -950,3 +950,20 @@ label.required::after {
   color: #3b82f6; /* azul claro para "infinito" */
   font-weight: bold;
 }
+
+.tag.gasto-mensual {
+  background-color: #38bdf8; /* celeste */
+  color: white;
+}
+
+.tarjeta-credito {
+  opacity: 0.6;
+  border: 1px dashed #60a5fa; /* celeste tenue */
+  background-color: #f0f9ff;  /* fondo más claro */
+  transition: all 0.3s ease;
+}
+
+.tarjeta-credito:hover {
+  opacity: 1;
+  background-color: #e0f2fe;
+}
