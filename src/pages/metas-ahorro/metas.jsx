@@ -71,15 +71,16 @@ export default function MetasAhorro() {
     if (modoEdicion) {
       await actualizarMeta(idMetaEditar, {
         titulo: nuevaMeta.titulo,
-        fecha_limite: nuevaMeta.fecha_limite,
+        fecha_limite: nuevaMeta.fecha_limite.split("-").reverse().join("-"),
         monto_meta: parseInt(nuevaMeta.monto_meta),
       });
     } else {
       await crearMeta({
         ...nuevaMeta,
+        fecha_limite: nuevaMeta.fecha_limite.split("-").reverse().join("-"),
         monto_meta: parseInt(nuevaMeta.monto_meta),
         id_usuario: id_usuario,
-      });
+      });      
     }
   
     // Recarga la lista actualizada desde la base de datos

@@ -9,22 +9,7 @@ export default function IniciarSesion() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  useEffect(() => {
-    const usuario = localStorage.getItem("usuario");
-    if (usuario) {
-      try {
-        const parsed = JSON.parse(usuario);
-        if (parsed?.id) {
-          navigate("/inicio");
-        }
-      } catch (e) {
-        console.warn("⚠️ Error al parsear usuario:", e);
-        localStorage.removeItem("usuario");
-      }
-    }
-  }, []);  
 
-  // 9-4-2024 - Se agrega la función handleLogin para manejar el inicio de sesión
   const handleLogin = async (event) => {
     event.preventDefault();
   
@@ -44,8 +29,10 @@ export default function IniciarSesion() {
         alert(data.error || "Credenciales inválidas");
         return;
       }
-  
-      localStorage.setItem("usuario", JSON.stringify(data.usuario)); // guarda el usuario completo
+      
+      console.log("Datos recibidos del backend:", data);
+      localStorage.setItem("id_usuario", data.usuario.id_usuario);
+      localStorage.setItem("nombre_usuario", data.usuario.nombre_usuario);
       navigate('/inicio');
     } catch (error) {
       console.error("Error al iniciar sesión:", error);

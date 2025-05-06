@@ -14,6 +14,7 @@ import {
 import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import axios from "axios";
+import { useNavigate } from "react-router-dom"; 
 
 ChartJS.register(
   CategoryScale,
@@ -26,6 +27,7 @@ ChartJS.register(
 );
 
 export default function DashboardFinanciero() {
+  const navigate = useNavigate();
   const [salario, setSalario] = useState(0);
   const [ahorros, setAhorros] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -36,7 +38,6 @@ export default function DashboardFinanciero() {
   const [diaFacturacion, setDiaFacturacion] = useState(1);
   const [mostrarModalFacturacion, setMostrarModalFacturacion] = useState(false);
   const [nuevoDiaFacturacion, setNuevoDiaFacturacion] = useState(diaFacturacion);
-  const [nombreUsuario, setNombreUsuario] = useState("Usuario");
   const [nuevoNombreUsuario, setNuevoNombreUsuario] = useState("");
   const [mostrarModalNombre, setMostrarModalNombre] = useState(false);
   const [transacciones, setTransacciones] = useState([]);
@@ -50,7 +51,9 @@ export default function DashboardFinanciero() {
   const [consejos, setConsejos] = useState([]);
   const [animando, setAnimando] = useState(false);
   const [consejoActual, setConsejoActual] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [metas, setMetas] = useState([]);
+  const [fechaAhorro, setFechaAhorro] = useState("");
   const [showChatBot, setShowChatBot] = useState(false);
   const [mensajeIA, setMensajeIA] = useState("");
   const [mensajesIA, setMensajesIA] = useState([
@@ -58,8 +61,55 @@ export default function DashboardFinanciero() {
   ]);
   const [cargandoIA, setCargandoIA] = useState(false);
   const [chatMensajes, setChatMensajes] = useState([]);
+  const [nombreUsuario, setNombreUsuario] = useState("");
+  const fechaActual = new Date();
+  const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1); // de 1 a 12
+  const [anioSeleccionado, setAnioSeleccionado] = useState(fechaActual.getFullYear());
+  const mesActual = mesSeleccionado - 1;
+  const anioActual = anioSeleccionado;
+  const [fechaSalario, setFechaSalario] = useState(""); // nueva fecha asociada al salario
 
 
+  const idUsuario = localStorage.getItem("idUsuario");
+  
+
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+  
+    fetch(`http://localhost:5000/api/usuarios/${id_usuario}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.nombre_usuario) {
+          setNombreUsuario(data.nombre_usuario);
+        } else {
+          console.warn("Nombre no encontrado en la respuesta:", data);
+        }
+      })
+      .catch((error) => {
+        console.error("Error al obtener nombre de usuario desde la base de datos:", error);
+      });
+  }, []);  
+  
+  
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (id_usuario) {
+      fetch(`http://localhost:5000/api/detalles_usuario?id_usuario=${id_usuario}`)
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Detalles usuario:", data);
+          if (data.salario !== undefined) setSalario(data.salario);
+          if (data.dia_facturacion !== undefined) setDiaFacturacion(data.dia_facturacion);
+          setLoading(false);
+        })        
+        .catch((error) => {
+          console.error("Error al obtener detalles usuario:", error);
+          setLoading(false); // ← también aquí
+        });
+    }
+  }, []);     
+  
 
   useEffect(() => {
     fetch("/consejos.json")
@@ -70,26 +120,14 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const usuarioStr = localStorage.getItem("usuario");
-    if (!usuarioStr) {
-      window.location.href = "/"; // redirige al login si no hay sesión
-      return;
+    const idUsuario = localStorage.getItem("id_usuario");
+  
+    console.log("🧠 Cargando dashboard con id_usuario:", idUsuario);
+  
+    if (!idUsuario || idUsuario === "null" || idUsuario === "undefined") {
+      navigate("/");  // solo redirige si está mal
     }
-  
-    const usuario = JSON.parse(usuarioStr);
-    const id_usuario = usuario.id;
-  
-    axios.get(`http://localhost:5000/api/detalles_usuario?id_usuario=${id_usuario}`)
-      .then(res => {
-        console.log("🔍 Detalles recibidos:", res.data);
-        const { salario, ahorros, nombre_usuario, dia_facturacion } = res.data;
-        setSalario(salario);
-        setAhorros(ahorros);
-        setNombreUsuario(nombre_usuario);
-        setDiaFacturacion(dia_facturacion);
-      })
-      .catch(err => console.error("❌ Error cargando detalles:", err));
-  }, []);   
+  }, []);     
 
 
   useEffect(() => {
@@ -113,10 +151,6 @@ export default function DashboardFinanciero() {
   useEffect(() => {
     if (!transacciones.length) return;
   
-    const ahora = new Date();
-    const mesActual = ahora.getMonth(); // 0-indexed
-    const anioActual = ahora.getFullYear();
-  
     const agrupados = {};
   
     transacciones
@@ -126,7 +160,10 @@ export default function DashboardFinanciero() {
         let clave;
   
         if (modoGrafico === "mensual") {
-          if (fecha.getMonth() === mesActual && fecha.getFullYear() === anioActual) {
+          if (
+            fecha.getMonth() + 1 === mesSeleccionado &&
+            fecha.getFullYear() === anioSeleccionado
+          ) {
             clave = fecha.getDate().toString().padStart(2, "0") + "-" + (fecha.getMonth() + 1).toString().padStart(2, "0");
           }
         } else {
@@ -145,17 +182,17 @@ export default function DashboardFinanciero() {
             if (!(t.tipoPago === "credito" && parseInt(t.cuotas) > 1)) {
               agrupados[clave].gasto += parseFloat(t.monto);
             }
-          }          
+          }
         }
       });
   
     let datos = [];
   
     if (modoGrafico === "mensual") {
-      const diasEnMes = new Date(anioActual, mesActual + 1, 0).getDate();
+      const diasEnMes = new Date(anioSeleccionado, mesSeleccionado, 0).getDate();
   
       for (let dia = 1; dia <= diasEnMes; dia++) {
-        const clave = dia.toString().padStart(2, "0") + "-" + (mesActual + 1).toString().padStart(2, "0");
+        const clave = dia.toString().padStart(2, "0") + "-" + mesSeleccionado.toString().padStart(2, "0");
   
         datos.push({
           fecha: clave,
@@ -164,9 +201,9 @@ export default function DashboardFinanciero() {
         });
       }
   
-      // agregamos el salario el día 1
+      // Agregamos el salario el día 1
       if (datos.length > 0) {
-        datos[0].ingreso += salario; //  sumamos el salario guardado
+        datos[0].ingreso += salario;
       }
     } else {
       datos = Object.entries(agrupados)
@@ -177,31 +214,13 @@ export default function DashboardFinanciero() {
           gasto: valores.gasto,
         }));
   
-      // agregamos salario al mes si se está en modo anual
       if (datos.length > 0) {
         datos[0].ingreso += salario;
       }
     }
   
     setDatosGrafico(datos);
-  }, [transacciones, modoGrafico, salario]);   
-
-
-  useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
-    if (id_usuario) {
-      fetch(`http://localhost:5000/api/gastos?id_usuario=${id_usuario}`)
-        .then(res => res.json())
-        .then(data => {
-          const gastosFormateados = data.map(gasto => ({
-            ...gasto,
-            dia_pago: parseInt(gasto.dia_pago)
-          }));
-          setGastosMensuales(gastosFormateados);
-        })
-        .catch(error => console.error("Error al cargar gastos mensuales:", error));
-    }
-  }, []);  
+  }, [transacciones, modoGrafico, salario, mesSeleccionado, anioSeleccionado]);     
 
 
   useEffect(() => {
@@ -213,8 +232,7 @@ export default function DashboardFinanciero() {
     datosGrafico.forEach((d) => {
       const [dia, mes] = d.fecha.split("-").map(x => parseInt(x));
       const gastosFijosHoy = gastosMensuales.filter(gasto => parseInt(gasto.dia_pago) === dia);
-      const totalGastosFijosHoy = gastosFijosHoy.reduce((acc, gasto) => acc + Number(gasto.monto), 0);
-      saldo += (d.ingreso - d.gasto - totalGastosFijosHoy);
+      saldo += (d.ingreso - d.gasto);  // solo considera las transacciones
       nuevoSaldoAcumulado.push(saldo);
     });
 
@@ -239,7 +257,18 @@ export default function DashboardFinanciero() {
     if (!datosGrafico.length || !movimientosAhorro.length) return;
   
     const acumuladoPorDia = [];
-    let acumulado = 0;
+
+    const fechaInicioGrafico = new Date();
+    const primerDia = new Date(fechaInicioGrafico.getFullYear(), fechaInicioGrafico.getMonth(), 1);
+    
+    let acumulado = movimientosAhorro.reduce((acc, mov) => {
+      const fechaMov = new Date(mov.fecha);
+      return fechaMov < primerDia
+        ? acc + (mov.tipo === "agregar" ? mov.monto : -mov.monto)
+        : acc;
+    }, 0);    
+
+    // let acumulado = 0;
   
     datosGrafico.forEach(d => {
       const [dia, mes] = d.fecha.split("-").map(Number);
@@ -267,17 +296,14 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const usuarioStr = localStorage.getItem("usuario");
-    if (!usuarioStr) return;
-
-    const usuario = JSON.parse(usuarioStr);
-    const id_usuario = usuario.id;
-
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+  
     fetch(`http://localhost:5000/api/metas/${id_usuario}`)
       .then(res => res.json())
       .then(data => setMetas(data))
       .catch(err => console.error("Error al cargar metas:", err));
-  }, []);
+  }, []);  
 
   
   const options = {
@@ -341,36 +367,84 @@ export default function DashboardFinanciero() {
     const id_usuario = localStorage.getItem("id_usuario");
     if (nuevoSalario && id_usuario) {
       const limpio = parseInt(nuevoSalario.replace(/\./g, ""));
+      const fechaFinal = fechaSalario || new Date().toISOString().split("T")[0];
+  
       axios.post("http://localhost:5000/api/actualizar_salario", {
         id_usuario: parseInt(id_usuario),
-        salario: limpio
+        salario: limpio,
+        fecha: fechaFinal
       })
       .then(() => {
         setSalario(limpio);
         setShowModal(false);
         setNuevoSalario("");
+        setFechaSalario(""); // limpia la fecha ingresada
       })
       .catch(err => {
         console.error("Error al actualizar salario:", err);
         alert("No se pudo actualizar el salario.");
       });
     }
+  };   
+
+
+  function calcularTotalAcumulado() {
+    return movimientosAhorro.reduce((acc, mov) => {
+      return acc + (mov.tipo === "agregar" ? mov.monto : -mov.monto);
+    }, 0);
+  }
+  
+  
+  const handleQuitarAhorro = () => {
+    const id_usuario = localStorage.getItem("id_usuario");
+  
+    if (!id_usuario || !montoAhorro) return;
+  
+    const montoNumerico = parseInt(montoAhorro.replace(/\./g, ""));
+    const totalActual = calcularTotalAcumulado();
+  
+    if (montoNumerico > totalActual) {
+      alert("No puedes quitar más ahorro del que tienes.");
+      return;
+    }
+  
+    fetch("http://localhost:5000/api/movimientos_ahorro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id_usuario,
+        tipo: "quitar",
+        monto: montoNumerico,
+        fecha: fechaAhorro || new Date().toISOString().split("T")[0],
+      }),
+    })
+    .then((res) => res.json())
+    .then((data) => {
+      setMovimientosAhorro([...movimientosAhorro, data]);
+      setShowQuitarAhorro(false);
+      setMontoAhorro("");
+      setFechaAhorro("");
+    })
+    .catch((err) => {
+      console.error("Error al quitar ahorro:", err);
+      alert("No se pudo descontar el monto.");
+    });
   };  
 
 
   const handleAgregarAhorro = () => {
     const id_usuario = localStorage.getItem("id_usuario");
+  
     if (montoAhorro !== "" && id_usuario) {
       const valor = parseInt(montoAhorro.replace(/\./g, ""));
-  
+      
       axios.post("http://localhost:5000/api/movimientos_ahorro", {
         id_usuario: parseInt(id_usuario),
         tipo: "agregar",
         monto: valor,
-        fecha: new Date().toISOString().split("T")[0]
+        fecha: fechaAhorro || new Date().toISOString().split("T")[0]
       })
       .then(() => {
-        // volver a cargar la lista de movimientos para actualizar el gráfico
         return fetch(`http://localhost:5000/api/movimientos_ahorro?id_usuario=${id_usuario}`);
       })
       .then(res => res.json())
@@ -378,6 +452,7 @@ export default function DashboardFinanciero() {
         setMovimientosAhorro(data);
         setShowAgregarAhorro(false);
         setMontoAhorro("");
+        setFechaAhorro("");
       })
       .catch(err => {
         console.error("Error al agregar ahorro:", err);
@@ -386,37 +461,9 @@ export default function DashboardFinanciero() {
     }
   };  
 
-
-  const handleQuitarAhorro = () => {
-    const id_usuario = localStorage.getItem("id_usuario");
-    if (montoAhorro !== "" && id_usuario) {
-      const valor = parseInt(montoAhorro.replace(/\./g, ""));
-  
-      axios.post("http://localhost:5000/api/movimientos_ahorro", {
-        id_usuario: parseInt(id_usuario),
-        tipo: "quitar",
-        monto: valor,
-        fecha: new Date().toISOString().split("T")[0]
-      })
-      .then(() => {
-        return fetch(`http://localhost:5000/api/movimientos_ahorro?id_usuario=${id_usuario}`);
-      })
-      .then(res => res.json())
-      .then(data => {
-        setMovimientosAhorro(data);
-        setShowQuitarAhorro(false);
-        setMontoAhorro("");
-      })
-      .catch(err => {
-        console.error("Error al quitar ahorro:", err);
-        alert("No se pudo descontar el monto.");
-      });
-    }
-  };  
-
   
   const verificarYDepositarSalario = (transaccionesExistentes) => {
-    const salarioGuardado = parseFloat(localStorage.getItem("salario")) || 0;
+    const salarioGuardado = salario;
     const id_usuario = localStorage.getItem("id_usuario");
   
     if (!id_usuario || salarioGuardado === 0) return;
@@ -546,10 +593,14 @@ export default function DashboardFinanciero() {
   );
 
 
+  if (loading) {
+    return <p style={{ padding: "2rem", fontSize: "1.2rem" }}>Cargando datos del usuario...</p>;
+  }
+
   return (
     <div className="page-layout">
-    <Header />
-    <div className="dashboard-container">
+      <Header />
+      <div className="dashboard-container">
       <main className="dashboard-main">
         <aside className="dashboard-sidebar">
 
@@ -663,6 +714,25 @@ export default function DashboardFinanciero() {
           </div>
         </div>
 
+        <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", alignItems: "center" }}>
+          <label>Mes:</label>
+          <select value={mesSeleccionado} onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}>
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {new Date(0, i).toLocaleString("es-CL", { month: "long" })}
+              </option>
+            ))}
+          </select>
+
+          <label>Año:</label>
+          <select value={anioSeleccionado} onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}>
+            {Array.from({ length: 5 }, (_, i) => {
+              const año = fechaActual.getFullYear() - 2 + i;
+              return <option key={año} value={año}>{año}</option>;
+            })}
+          </select>
+        </div>
+
           <div style={{ overflowX: "auto", width: "100%" }}>
             <div style={{ minWidth: "1200px", height: "400px" }}>
               <Line
@@ -735,14 +805,6 @@ export default function DashboardFinanciero() {
                             } else if (t.tipo === "gasto") {
                               detalles.push(`-$${Number(t.monto).toLocaleString("es-CL")} → (${t.descripcion})`);
                             }
-                          });
-                        
-                          // Buscar gastos mensuales del día
-                          const diaActual = parseInt(fechaLabel.split("-")[0]);
-                          const gastosFijosHoy = gastosMensuales.filter(g => parseInt(g.dia_pago) === diaActual);
-                        
-                          gastosFijosHoy.forEach(gm => {
-                            detalles.push(`-$${Number(gm.monto).toLocaleString("es-CL")} → (${gm.nombre})`);
                           });
                         
                           // Retornar saldo y luego todos los detalles encontrados
@@ -835,146 +897,139 @@ export default function DashboardFinanciero() {
               })}
             </div>
           )}
+        
+
+          {/* Modal: Cambiar día de facturación */}
+          {mostrarModalFacturacion && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3>Cambiar día de facturación</h3>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={nuevoDiaFacturacion}
+                  onChange={(e) => setNuevoDiaFacturacion(e.target.value)}
+                />
+                <div className="modal-buttons">
+                  <button onClick={handleActualizarFacturacion}>Guardar</button>
+                  <button onClick={() => setMostrarModalFacturacion(false)}>Cancelar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal: Añadir ahorro */}
+          {showAgregarAhorro && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3>Añadir monto al ahorro</h3>
+                <input
+                  type="text"
+                  placeholder="Monto"
+                  value={montoAhorro}
+                  onChange={(e) => {
+                    const sinPuntos = e.target.value.replace(/\./g, '');
+                    if (!isNaN(sinPuntos)) {
+                      const formateado = Number(sinPuntos).toLocaleString("es-CL", { useGrouping: true });
+                      setMontoAhorro(formateado);
+                    }
+                  }}
+                />
+                <label>Fecha:</label>
+                <input
+                  type="date"
+                  value={fechaAhorro}
+                  onChange={(e) => setFechaAhorro(e.target.value)}
+                />
+                <div className="modal-buttons">
+                  <button onClick={handleAgregarAhorro}>Guardar</button>
+                  <button onClick={() => {
+                    setShowAgregarAhorro(false);
+                    setMontoAhorro("");
+                    setFechaAhorro("");
+                  }}>Cancelar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal: Quitar ahorro */}
+          {showQuitarAhorro && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3>Descontar monto del ahorro</h3>
+                <input
+                  type="text"
+                  placeholder="Monto"
+                  value={montoAhorro}
+                  onChange={(e) => {
+                    const sinPuntos = e.target.value.replace(/\./g, '');
+                    if (!isNaN(sinPuntos)) {
+                      const formateado = Number(sinPuntos).toLocaleString("es-CL", { useGrouping: true });
+                      setMontoAhorro(formateado);
+                    }
+                  }}
+                />
+                <label>Fecha:</label>
+                <input
+                  type="date"
+                  value={fechaAhorro}
+                  onChange={(e) => setFechaAhorro(e.target.value)}
+                />
+                <div className="modal-buttons">
+                  <button onClick={handleQuitarAhorro}>Guardar</button>
+                  <button onClick={() => {
+                    setShowQuitarAhorro(false);
+                    setMontoAhorro("");
+                    setFechaAhorro("");
+                  }}>Cancelar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal: Editar salario */}
+          {showModal && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3>Editar salario</h3>
+                <input
+                  type="text"
+                  placeholder="Nuevo salario"
+                  value={nuevoSalario}
+                  onChange={(e) => {
+                    const limpio = e.target.value.replace(/\./g, '');
+                    if (!isNaN(limpio)) {
+                      const valorFormateado = Number(limpio).toLocaleString("es-CL");
+                      setNuevoSalario(valorFormateado);
+                    }
+                  }}                  
+                />
+                <label>Fecha desde que se aplica el salario:</label>
+                <input
+                  type="date"
+                  value={fechaSalario}
+                  onChange={(e) => setFechaSalario(e.target.value)}
+                />
+                <div className="modal-buttons">
+                  <button onClick={handleSave}>Guardar</button>
+                  <button onClick={() => {
+                    setShowModal(false);
+                    setNuevoSalario("");
+                    setFechaSalario("");
+                  }}>Cancelar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
 
         </div>
 
-      </main>  
-
-      <Footer />
-
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <h3>Editar salario</h3>
-            <div className="modal-input-container">
-              <span>$</span>
-              <input
-                type="text"
-                placeholder="Ingrese el salario"
-                value={nuevoSalario}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, ""); // solo números
-                  const formatted = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                  setNuevoSalario(formatted);
-                }}
-              />
-            </div>
-            <div className="modal-buttons">
-              <button onClick={handleSave}>Aceptar</button>
-              <button onClick={() => setShowModal(false)}>Cancelar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {(showAgregarAhorro || showQuitarAhorro) && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <h3>{showAgregarAhorro ? "Agregar monto en ahorros" : "Eliminar monto en ahorros"}</h3>
-            <div className="modal-input-container">
-            <input
-              type="text"
-              placeholder={showAgregarAhorro ? "Escriba el monto a agregar" : "Escriba el monto a disminuir"}
-              value={montoAhorro}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, ""); // solo números
-                const formatted = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                setMontoAhorro(formatted);
-              }}
-            />
-            </div>
-            <div className="modal-buttons">
-              <button onClick={showAgregarAhorro ? handleAgregarAhorro : handleQuitarAhorro}>Aceptar</button>
-              <button onClick={() => {
-                setShowAgregarAhorro(false);
-                setShowQuitarAhorro(false);
-                setMontoAhorro("");
-              }}>Cancelar</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-
-    {showChatBot && (
-      <div className="chatbot-burbuja">
-        <div className="chat-header">🤖 FinAI – Tu asistente de finanzas</div>
-        <div className="chat-mensajes">
-          {mensajesIA.map((msg, index) => (
-            <div
-              key={index}
-              className={msg.role === "user" ? "msg-user" : "msg-ia"}
-            >
-              {msg.content}
-            </div>
-          ))}
-        </div>
-        <div className="chat-footer">
-          <textarea
-            rows="2"
-            placeholder="Escribe tu pregunta..."
-            value={mensajeIA}
-            onChange={(e) => setMensajeIA(e.target.value)}
-          ></textarea>
-          <button onClick={async () => {
-            const nuevoMensaje = { role: "user", content: mensajeIA };
-            const nuevosMensajes = [...mensajesIA, nuevoMensaje];
-            setMensajesIA(nuevosMensajes);
-            setMensajeIA("");
-            setCargandoIA(true);
-
-            const resumen = `
-              Saldo: $${Number(balanceReal).toLocaleString("es-CL")}, 
-              Ahorros: $${Number(totalAhorros).toLocaleString("es-CL")}, 
-              Día de facturación: ${diaFacturacion}, 
-              Metas: ${metas.map(m => `${m.titulo} ($${m.monto_meta})`).join(", ")},
-              Últimas transacciones: ${transacciones.slice(-5).map(t => `${t.tipo} por $${t.monto} (${t.descripcion})`).join("; ")}.
-            `;
-
-            try {
-              const res = await fetch("http://localhost:5000/api/chat_ia", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  contexto: resumen,
-                  historial: nuevosMensajes
-                })
-              });
-              const data = await res.json();
-              const respuesta = {
-                role: "assistant",
-                content: data.respuesta || "Lo siento, no entendí la pregunta."
-              };
-              setMensajesIA([...nuevosMensajes, respuesta]);
-            } catch (err) {
-              setMensajesIA([...nuevosMensajes, { role: "assistant", content: "Error al contactar a la IA." }]);
-            }
-            setCargandoIA(false);
-          }}>
-            Enviar
-          </button>
-        </div>
+      </main>
+        <Footer />
       </div>
-    )}
-
-    {mostrarModalFacturacion && (
-  <div className="modal-overlay">
-    <div className="modal-box">
-      <h3>Editar día de facturación</h3>
-      <input
-        type="number"
-        min="1"
-        max="31"
-        value={nuevoDiaFacturacion}
-        onChange={(e) => setNuevoDiaFacturacion(e.target.value)}
-      />
-      <div className="modal-buttons">
-        <button onClick={handleActualizarFacturacion}>Aceptar</button>
-        <button onClick={() => setMostrarModalFacturacion(false)}>Cancelar</button>
-      </div>
-    </div>
-  </div>
-)}
     </div>
   );
 }

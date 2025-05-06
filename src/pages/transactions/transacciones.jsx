@@ -47,6 +47,10 @@ export default function Transacciones() {
   const [modalPagoAbierto, setModalPagoAbierto] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState(null);
   const [montoPagado, setMontoPagado] = useState("");
+  const [gastosMensuales, setGastosMensuales] = useState([]);
+  const [showSelectorTipo, setShowSelectorTipo] = useState(false);
+  const [menuAbierto, setMenuAbierto] = useState(null);
+  const [showModalEditar, setShowModalEditar] = useState(false);
 
 
   useEffect(() => {
@@ -55,6 +59,7 @@ export default function Transacciones() {
     }
   }, [tipo]);
   
+
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
@@ -69,6 +74,7 @@ export default function Transacciones() {
       });
   }, []);
 
+
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
   
@@ -77,7 +83,7 @@ export default function Transacciones() {
       return;
     }
   
-    fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
+    fetch(`http://localhost:5000/api/transacciones/${id_usuario}/todas`)
       .then(res => {
         if (!res.ok) {
           throw new Error(`Error al cargar transacciones: ${res.status}`);
@@ -85,18 +91,21 @@ export default function Transacciones() {
         return res.json();
       })
       .then(data => {
-        setTransacciones(data.filter(t => t.visible !== false));
-        setEliminadas(data.filter(t => t.visible === false));
+        setTransacciones(data.filter(t => t.visible === true || t.visible === 1));
+        setEliminadas(data.filter(t => t.visible === false || t.visible === 0));
+        console.log("🗑️ Eliminadas:", data.filter(t => t.visible === 0 || t.visible === false));
       })
       .catch(error => {
         console.error("Error al cargar transacciones:", error);
       });
   }, []);
   
+
   useEffect(() => {
     console.log("💬 Eliminadas:", eliminadas);
   }, [eliminadas]);  
   
+
   useEffect(() => {
     if (nuevaTransaccion.tipoPago !== "credito") return;
   
@@ -123,6 +132,74 @@ export default function Transacciones() {
     nuevaTransaccion.tipoPago
   ]);
   
+
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+  
+    fetch(`http://localhost:5000/api/gastos_mensuales?id_usuario=${id_usuario}`)
+      .then(res => res.json())
+      .then(data => {
+        const mesF = parseInt(mesFiltrado);
+        const anioF = parseInt(anioFiltrado);
+  
+        const gastosFiltrados = data
+          .filter(gasto => {
+            if (!gasto.fecha_creacion || !gasto.dia_pago) return false;
+  
+            const [anioCreado, mesCreado] = gasto.fecha_creacion.split("-").map(Number);
+  
+            // Mostrar el gasto si el mes filtrado es igual o posterior al mes de creación
+            return anioF > anioCreado || (anioF === anioCreado && mesF >= mesCreado);
+          })
+          .map(gasto => {
+            const fechaCobro = `${anioFiltrado}-${String(mesFiltrado).padStart(2, "0")}-${String(gasto.dia_pago).padStart(2, "0")}`;
+            return {
+              id_transaccion: `gm-${gasto.id_gasto}`,
+              fecha: fechaCobro,
+              monto: gasto.monto,
+              categoria: "Gasto mensual",
+              descripcion: `${gasto.nombre}${gasto.descripcion ? " – " + gasto.descripcion : ""}`,
+              tipo: "gasto",
+              tipoPago: "automático",
+              visible: true,
+              imagen: null,
+              esMensual: true
+            };
+          });
+  
+        setGastosMensuales(gastosFiltrados);
+      })
+      .catch(error => {
+        console.error("Error al cargar gastos mensuales:", error);
+      });
+  }, [mesFiltrado, anioFiltrado]);    
+
+
+  const scrollToForm = () => {
+    if (formularioRef.current) {
+      formularioRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+
+  const toggleMenu = (i) => {
+    setMenuAbierto(menuAbierto === i ? null : i);
+  };
+  
+
+  // Cierra el menú si se hace clic fuera
+  useEffect(() => {
+    const cerrar = (e) => {
+      if (!e.target.closest(".menu-transaccion")) {
+        setMenuAbierto(null);
+      }
+    };
+    document.addEventListener("click", cerrar);
+    return () => document.removeEventListener("click", cerrar);
+  }, []);
+
+  
   const getMesActual = () => {
     const hoy = new Date();
     const año = hoy.getFullYear();
@@ -130,10 +207,12 @@ export default function Transacciones() {
     return `${año}-${mes}`;
   };
   
+
   const formatearConPuntos = (valor) => {
     const soloNumeros = valor.replace(/\D/g, "");
     return soloNumeros.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
+  
   
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -153,17 +232,15 @@ export default function Transacciones() {
     }));
   };  
 
-  let transaccionesFiltradas = transacciones.filter((t) => {
+  const todas = [...transacciones, ...gastosMensuales];
+
+  const transaccionesFiltradas = todas.filter((t) => {
     const fuente = t.mesPago || t.fecha;
     if (!fuente || !fuente.includes("-")) return false;
-  
-    const partes = fuente.split("-");
-    const anio = partes[0];
-    const mes = partes[1];
-  
+    const [anio, mes] = fuente.split("-");
     const coincideMes = !mesFiltrado || mes === mesFiltrado.padStart(2, "0");
     const coincideAnio = !anioFiltrado || anio === anioFiltrado;
-    return t.visible !== false && coincideMes && coincideAnio;
+    return t.visible == 1 && coincideMes && coincideAnio;
   });
   
   // Ordenar fuera del .filter
@@ -187,28 +264,28 @@ export default function Transacciones() {
   
   
   const editarTransaccion = (id) => {
-    const trans = transacciones.find(t => t.id_transaccion === id);
+    const trans = transacciones.find((t) => t.id_transaccion === id);
     if (!trans) return;
   
-    setEditIndex(trans.id_transaccion);
-    setTipo(trans.tipo);
-  
     setNuevaTransaccion({
+      id_transaccion: trans.id_transaccion,
       fecha: trans.fecha,
-      monto: formatearConPuntos(trans.monto.toString()),
-      categoria: trans.categoria,
-      descripcion: trans.descripcion,
-      mesPago: trans.mesPago || getMesActual(),
-      imagen: trans.imagen || null,
-      tipoPago: trans.tipoPago,
-      cuotas: trans.cuotas?.toString() || "1",
-      interes: trans.interes?.toString() || "0",
-      totalCredito: trans.totalCredito?.toString() || "",
-      valorCuota: trans.valorCuota?.toString() || ""
+      monto: trans.monto,
+      descripcion: trans.descripcion || "",
+      categoria: trans.categoria || "",
+      tipoPago: trans.tipoPago || "",
+      tipo: trans.tipo || "gasto",
+      imagen: trans.imagen || "",
+      cuotas: trans.cuotas || 1,
+      valorCuota: trans.valorCuota || "",
+      totalCredito: trans.totalCredito || "",
+      interes: trans.interes || "",
+      mesPago: trans.mesPago || "",
     });
   
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    if (formularioRef.current) formularioRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTipo(trans.tipo);
+    setEditIndex(id);
+    setShowModalEditar(true); // abre el modal
   };  
   
   
@@ -326,7 +403,8 @@ export default function Transacciones() {
         const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
         const data = await respuesta.json();
         setTransacciones(data.filter(t => t.visible !== false));
-        setEliminadas(data.filter(t => t.visible === false));
+        setEliminadas(data.filter(t => t.visible === 0 || t.visible === false));
+        console.log("🗑️ Eliminadas:", data.filter(t => t.visible === 0 || t.visible === false));
       }
   
       // 🔵 Limpiar formulario
@@ -378,7 +456,8 @@ export default function Transacciones() {
       const data = await respuesta.json();
   
       setTransacciones(data.filter(t => t.visible));
-      setEliminadas(data.filter(t => t.visible === false));
+      setEliminadas(data.filter(t => t.visible === 0 || t.visible === false));
+      console.log("🗑️ Eliminadas:", data.filter(t => t.visible === 0 || t.visible === false));
     } catch (error) {
       console.error("Error al eliminar transacción:", error);
       alert("❌ Error al eliminar la transacción");
@@ -496,26 +575,30 @@ export default function Transacciones() {
       const data = await resp.json();
   
       setTransacciones(data.filter(t => t.visible !== false));
-      setEliminadas(data.filter(t => t.visible === false));
-  
+      setEliminadas(data.filter(t => t.visible === 0 || t.visible === false));
+      console.log("🗑️ Eliminadas:", data.filter(t => t.visible === 0 || t.visible === false));
     } catch (error) {
       console.error("Error al recuperar transacción:", error);
       alert("❌ No se pudo recuperar la transacción");
     }
   };
-
   
   const eliminadasFiltradas = eliminadas.filter((t) => {
     const fuente = t.mesPago || t.fecha;
     if (!fuente || !fuente.includes("-")) return false;
   
-    const [anio, mes] = fuente.split("-");
+    const partes = fuente.split("-");
+    const anio = partes[0];
+    const mes = partes[1];
+  
     const coincideMes = !mesFiltrado || mes === mesFiltrado.padStart(2, "0");
     const coincideAnio = !anioFiltrado || anio === anioFiltrado;
-    return coincideMes && coincideAnio;
-  });
-
   
+    return coincideMes && coincideAnio;
+  });   
+
+  console.log("🧪 eliminadasFiltradas:", eliminadasFiltradas);
+
   return (
     <div className="page-layout">
       <Header />
@@ -523,10 +606,6 @@ export default function Transacciones() {
         <h1 className="titulo-transacciones">Gestión de Transacciones</h1>
 
         <div className="botones-agregar-contenedor">
-          <div className="botones-izquierda">
-            <button className="btn-seleccion" onClick={() => setTipo("ingreso")}>Agregar ingreso</button>
-            <button className="btn-seleccion" onClick={() => setTipo("gasto")}>Agregar gasto</button>
-          </div>
 
           <div className="menu-exportar-wrapper">
             <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
@@ -562,218 +641,6 @@ export default function Transacciones() {
               </div>
             </div>
           </div>
-        </div>
-
-
-        <div className="formulario-transaccion" ref={formularioRef}>
-        <h2 className={`titulo-formulario ${tipo}`}>Actualizar {tipo}</h2>
-          {editIndex !== null && (
-          <div className="aviso-edicion">
-            <strong>Estás editando una transacción.</strong> No olvides guardar o cancelar los cambios.
-          </div>
-        )}
-          <div className="grid-formulario">
-
-            <div className="campo-fecha">
-              <label className="required">Fecha</label>
-              <input
-                type="date"
-                name="fecha"
-                value={nuevaTransaccion.fecha}
-                onChange={handleChange}
-                required
-                className={'form-input ${camposInvalidos.includes("fecha") ? "input-error" : ""}'}
-              />
-            </div>
-
-            <div className="campo-monto">
-              <label className="required">Monto</label>
-              <input
-                type="text"
-                name="monto"
-                value={nuevaTransaccion.monto}
-                onChange={handleChange}
-                required
-                className={camposInvalidos.includes("monto") ? "input-error" : ""}
-              />
-            </div>
-
-            <div className="campo-categoria">
-              <label className="required">Categoría</label>
-              <select
-                name="categoria"
-                value={nuevaTransaccion.categoria}
-                onChange={handleChange}
-                required
-                className={camposInvalidos.includes("categoria") ? "input-error" : ""}
-              >
-                <option value="" disabled hidden>Seleccione una</option>
-
-                {/* Mostrar la categoría seleccionada si no está en la lista */}
-                {!categorias.some(cat => cat.nombre === nuevaTransaccion.categoria) &&
-                  nuevaTransaccion.categoria && (
-                    <option value={nuevaTransaccion.categoria} hidden>
-                      {nuevaTransaccion.categoria} (no disponible)
-                    </option>
-                )}
-
-                {categorias.map((cat, index) => (
-                  <option key={index} value={cat.nombre}>{cat.nombre}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="campo-descripcion">
-              <label className="required">Descripción</label>
-              <input
-                type="text"
-                name="descripcion"
-                value={nuevaTransaccion.descripcion}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="campo-tipopago">
-              <label className="required">Tipo de pago</label>
-              <select
-                name="tipoPago"
-                value={nuevaTransaccion.tipoPago}
-                onChange={handleChange}
-                required
-                className={camposInvalidos.includes("tipoPago") ? "input-error" : ""}
-              >
-                <option value="" disabled hidden>Seleccione uno</option>
-
-                {tipo === "ingreso" ? (
-                  <>
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
-                    <option value="deposito">Depósito</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="efectivo">Efectivo</option>
-                    <option value="debito">Débito</option>
-                    <option value="credito">Crédito</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            {nuevaTransaccion.tipoPago === "credito" && (
-              <>
-                <div className="campo-cuotas">
-                  <label className="required">Número de cuotas</label>
-                  <input
-                    type="number"
-                    name="cuotas"
-                    value={nuevaTransaccion.cuotas}
-                    onChange={handleChange}
-                    min="1"
-                    required
-                    className={`required ${camposInvalidos.includes("cuotas") ? "input-error" : ""}`}
-                  />
-                </div>
-
-                <div className="campo-interes">
-                  <label>Interés (%)</label>
-                  <input
-                    type="number"
-                    name="interes"
-                    value={nuevaTransaccion.interes}
-                    onChange={handleChange}
-                    step="0.1"
-                    min="0"
-                    className={camposInvalidos.includes("interes") ? "input-error" : ""}
-                  />
-                </div>
-
-                <div className="campo-valor-cuota">
-                  <label>Valor estimado de cuota</label>
-                  <input type="text" value={nuevaTransaccion.valorCuota} disabled />
-                </div>
-
-                <div className="campo-total-credito">
-                  <label>Total estimado a pagar</label>
-                  <input type="text" value={nuevaTransaccion.totalCredito} disabled />
-                </div>
-              </>
-            )}
-
-            <div className="campo-imagen">
-            <label>Adjuntar imagen</label>
-              <input
-                type="file"
-                ref={fileInputRef}
-                name="imagen"
-                onChange={handleChange}
-                accept=".jpg,.jpeg,.png,.pdf,.xlsx,.xls,.csv,.doc,.docx,.txt"
-              />
-
-              {nuevaTransaccion.imagen && typeof nuevaTransaccion.imagen === "string" && (
-                <div style={{ marginTop: "8px" }}>
-                  📎 Ya hay un comprobante guardado:
-                  <span
-                    style={{ color: "#3b82f6", cursor: "pointer", marginLeft: "8px" }}
-                    onClick={() => {
-                      const url = nuevaTransaccion.imagen.startsWith("http")
-                        ? nuevaTransaccion.imagen
-                        : `http://localhost:5000${nuevaTransaccion.imagen}`;
-                      setImagenModal(url);
-                      setShowModalImagen(true);
-                    }}
-                  >
-                    Ver comprobante
-                  </span>
-
-                  <span
-                    style={{ color: "#ef4444", cursor: "pointer", marginLeft: "20px" }}
-                    onClick={() => {
-                      setNuevaTransaccion(prev => ({ ...prev, imagen: null }));
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                  >
-                    ❌ Eliminar comprobante
-                  </span>
-                </div>
-              )}
-            </div>
-
-          </div>
-
-          <div className="acciones">
-            <button className="btn-guardar" onClick={enviarTransaccion}>
-            {editIndex !== null
-              ? tipo === "gasto" ? "Actualizar gasto" : "Actualizar ingreso"
-              : tipo === "gasto" ? "Guardar gasto" : "Guardar ingreso"}
-            </button>
-            {editIndex !== null && (
-              <button
-                className="btn-cancelar"
-                onClick={() => {
-                  setEditIndex(null);
-                  setTransaccionEditada({});
-                  setNuevaTransaccion({
-                    fecha: "",
-                    monto: "",
-                    categoria: "",
-                    descripcion: "",
-                    mesPago: getMesActual(),
-                    imagen: null,
-                    tipoPago: "efectivo",
-                    cuotas: "1",
-                    interes: "0",
-                    totalCredito: "",
-                    valorCuota: ""
-                  });
-                  if (fileInputRef.current) fileInputRef.current.value = "";
-                }}
-              >
-                Cancelar edición
-              </button>
-            )}
-          </div>
-
         </div>
         
         <div className="filtro-botonera">
@@ -845,80 +712,98 @@ export default function Transacciones() {
         </div>
 
         <h3 className="titulo-secundario">Transacciones registradas</h3>
-          <div className="lista-transacciones">
-          {transaccionesFiltradas.map((t, index) => (
-            <div
-              className={`tarjeta-minimal ${t.tipoPago === "credito" ? "tarjeta-credito" : ""}`}
-              key={index}
-            >
-              <div className="fila-superior">
-                <div
-                  className={`tag ${
-                    t.categoria === "Gasto mensual"
-                      ? "gasto-mensual"
-                      : t.tipo === "ingreso"
-                      ? "ingreso"
-                      : "gasto"
-                  }`}
-                >
-                  {t.categoria === "Gasto mensual" ? "GASTO MENSUAL" : t.tipo.toUpperCase()}
-                </div>
-                <div className="fecha">{formatearFechaBonita(t.fecha)}</div>
-              </div>
+        <div className="lista-transacciones">
+        {(() => {
+          const filas = [];
+          for (let i = 0; i < transaccionesFiltradas.length; i += 2) {
+            const fila = transaccionesFiltradas.slice(i, i + 2);
 
-              <div className="contenido-horizontal">
-                <div className="item">
-                  <span>Monto:</span>
-                  <div className="monto">
-                    ${Number(t.monto).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            fila.forEach((t, index) => {
+              filas.push(
+                <div className={`tarjeta-minimal ${t.esMensual ? "gasto-mensual" : ""} ${t.tipoPago === "credito" ? "transaccion-credito" : ""}`} key={i + index}>
+                  <div className="fila-superior">
+                    <div className={`tag ${t.categoria === "Gasto mensual" ? "gasto-mensual" : t.tipo}`}>
+                      {t.categoria === "Gasto mensual" ? "GASTO MENSUAL" : t.tipo.toUpperCase()}
+                    </div>
+                    <div className="fecha">{formatearFechaBonita(t.fecha)}</div>
                   </div>
-                </div>
-                <div className="item">
-                  <span>Categoría:</span>
-                  <div>{t.categoria}</div>
-                </div>
-                <div className="item">
-                  <span>Descripción:</span>
-                  <div>{t.descripcion}</div>
-                </div>
-                <div className="item">
-                  <span>Tipo de pago:</span>
-                  <div>{t.tipoPago}</div>
-                </div>
-              </div>
-              {t.imagen && (
-              <button
-              className="btn-ver-comprobante"
-              onClick={() => {
-                const imagen = t.imagen;
-                if (!imagen) {
-                  alert("Esta transacción no tiene comprobante adjunto.");
-                  return;
-                }
-                const url = imagen.startsWith("http")
-                  ? imagen
-                  : `http://localhost:5000/imagenes/${imagen}`;
-                setImagenModal(url);
-                setShowModalImagen(true);
-              }}
-            >
-              Ver comprobante
-            </button>                                  
-            )}
 
-            {!t.protegida && (
-              <div className="acciones">
-                <button className="texto-boton editar" onClick={() => editarTransaccion(t.id_transaccion)}>
-                  Editar
-                </button>
-                <button className="texto-boton eliminar" onClick={() => eliminarTransaccion(t.id || t.id_transaccion)}>
-                  Eliminar
-                </button>
-              </div>
-            )}
+                  <div className="contenido-horizontal">
+                    <div className="item"><span>Monto:</span><div className="monto">${Number(t.monto).toLocaleString("es-CL")}</div></div>
+                    <div className="item"><span>Categoría:</span><div>{t.categoria}</div></div>
+                    <div className="item"><span>Descripción:</span><div>{t.descripcion}</div></div>
+                    <div className="item"><span>Tipo de pago:</span><div>{t.tipoPago}</div></div>
+                  </div>
 
-            </div>
-          ))}
+                  {t.imagen && (
+                    <button className="btn-ver-comprobante" onClick={() => {
+                      const url = t.imagen.startsWith("http") ? t.imagen : `http://localhost:5000/imagenes/${t.imagen}`;
+                      setImagenModal(url);
+                      setShowModalImagen(true);
+                    }}>
+                      Ver comprobante
+                    </button>
+                  )}
+
+                  {!t.protegida && (
+                    <div className="menu-transaccion">
+                      <button className="boton-menu" onClick={() => toggleMenu(t.id_transaccion)}>⋯</button>
+                      {menuAbierto === t.id_transaccion && (
+                        <div className="menu-opciones">
+                          <button onClick={() => editarTransaccion(t.id_transaccion)}>Editar</button>
+                          <button onClick={() => eliminarTransaccion(t.id || t.id_transaccion)}>Eliminar</button>
+                        </div>
+                    )}
+                  </div>                  
+                  )}
+                </div>
+              );
+            });
+
+            // ⬇️ Si hay solo una tarjeta en esta fila, el "+" va a la derecha
+            if (fila.length === 1 && i + 1 >= transaccionesFiltradas.length) {
+              filas.push(
+                <div key="mas-derecha" className="col-der">
+                  {showSelectorTipo ? (
+                    <div className="selector-tipo-popup">
+                      <p>¿Qué deseas agregar?</p>
+                      <div className="botones-selector">
+                        <button className="btn-verde" onClick={() => { setTipo("ingreso"); setShowSelectorTipo(false); scrollToForm(); }}>Ingreso</button>
+                        <button className="btn-rojo" onClick={() => { setTipo("gasto"); setShowSelectorTipo(false); scrollToForm(); }}>Gasto</button>
+                        <button className="btn-cancelar" onClick={() => setShowSelectorTipo(false)}>Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button className="boton-agregar" onClick={() => setShowSelectorTipo(true)}>＋</button>
+                  )}
+                </div>
+              );
+            }
+          }
+
+          // ⬇️ Si la última fila tiene 2 tarjetas, el "+" va abajo a la izquierda
+          if (transaccionesFiltradas.length % 2 === 0) {
+            filas.push(
+              <div key="mas-izquierda" className="col-izq">
+                {showSelectorTipo ? (
+                  <div className="selector-tipo-popup">
+                    <p>¿Qué deseas agregar?</p>
+                    <div className="botones-selector">
+                      <button className="btn-verde" onClick={() => { setTipo("ingreso"); setShowSelectorTipo(false); scrollToForm(); }}>Ingreso</button>
+                      <button className="btn-rojo" onClick={() => { setTipo("gasto"); setShowSelectorTipo(false); scrollToForm(); }}>Gasto</button>
+                      <button className="btn-cancelar" onClick={() => setShowSelectorTipo(false)}>Cancelar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="boton-agregar" onClick={() => setShowSelectorTipo(true)}>＋</button>
+                )}
+              </div>
+            );
+          }
+
+          return filas;
+        })()}
+
         </div>
 
       <h3 className="titulo-secundario">Transacciones eliminadas</h3>
@@ -962,6 +847,50 @@ export default function Transacciones() {
           </li>        
         ))}
       </ul>
+
+      {showModalEditar && (
+        <div className="modal-overlay" onClick={() => setShowModalEditar(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Editar transacción</h3>
+            <div className="grid-formulario">
+              <div>
+                <label>Fecha:</label>
+                <input type="date" name="fecha" value={nuevaTransaccion.fecha} onChange={handleModalChange} />
+              </div>
+              <div>
+                <label>Monto:</label>
+                <input type="number" name="monto" value={nuevaTransaccion.monto} onChange={handleModalChange} />
+              </div>
+              <div>
+                <label>Categoría:</label>
+                <select name="categoria" value={nuevaTransaccion.categoria} onChange={handleModalChange}>
+                  {categorias.map((c, i) => (
+                    <option key={i} value={c.nombre}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>Descripción:</label>
+                <input type="text" name="descripcion" value={nuevaTransaccion.descripcion} onChange={handleModalChange} />
+              </div>
+              <div>
+                <label>Tipo de pago:</label>
+                <select name="tipoPago" value={nuevaTransaccion.tipoPago} onChange={handleModalChange}>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="credito">Crédito</option>
+                  <option value="debito">Débito</option>
+                  <option value="transferencia">Transferencia</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="acciones-transaccion">
+              <button className="btn-editar" onClick={enviarTransaccion}>Guardar cambios</button>
+              <button className="btn-cerrar" onClick={() => setShowModalEditar(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </main>
       {showModalImagen && (

@@ -3,10 +3,16 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import React, { useState, useEffect } from "react";
 
-const idUsuario = localStorage.getItem("id_usuario");
-
 // 9-4-2024 - Se agrega la función Categorias para manejar la vista de categorías
 const Categorias = () => {
+
+  const idUsuario = localStorage.getItem("id_usuario");
+
+  if (!idUsuario) {
+    alert("No se encontró el ID del usuario. Por favor, inicia sesión.");
+    return null; // detiene la carga del componente
+  }
+  
   const [categorias, setCategorias] = useState([]);
   useEffect(() => {
     fetch(`http://localhost:5000/api/categorias/${idUsuario}`)
