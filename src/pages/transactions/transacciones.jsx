@@ -22,6 +22,8 @@ export default function Transacciones() {
     mesPago: "",
     imagen: null,
     tipoPago: "efectivo",
+    tipoPago2: "",
+    monto2: "",
     cuotas: "1",
     interes: "0",
     totalCredito: "",
@@ -49,8 +51,11 @@ export default function Transacciones() {
   const [montoPagado, setMontoPagado] = useState("");
   const [gastosMensuales, setGastosMensuales] = useState([]);
   const [showSelectorTipo, setShowSelectorTipo] = useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState(null);
+  const [usarSegundoMetodo, setUsarSegundoMetodo] = useState(false);
   const [showModalEditar, setShowModalEditar] = useState(false);
+  const [usarSegundoMetodoEditar, setUsarSegundoMetodoEditar] = useState(false);
 
 
   useEffect(() => {
@@ -282,7 +287,8 @@ export default function Transacciones() {
       interes: trans.interes || "",
       mesPago: trans.mesPago || "",
     });
-  
+
+    setUsarSegundoMetodoEditar(!!trans.tipoPago2);
     setTipo(trans.tipo);
     setEditIndex(id);
     setShowModalEditar(true); // abre el modal
@@ -359,15 +365,34 @@ export default function Transacciones() {
     const montoNumerico = typeof origen.monto === "string"
       ? parseFloat(origen.monto.replace(/\./g, "").replace(",", "."))
       : parseFloat(origen.monto);
-  
+
+      if (usarSegundoMetodo || usarSegundoMetodoEditar) {
+        const monto1 = origen.monto;
+        const monto2 = origen.monto2 || "0";
+      
+        const montoNum1 = parseFloat((monto1 || "0").toString().replace(/\./g, "").replace(",", "."));
+        const montoNum2 = parseFloat((monto2 || "0").toString().replace(/\./g, "").replace(",", "."));
+      
+        const suma = montoNum1 + montoNum2;
+      
+        if (Math.abs(suma - montoNum1) > 0.01 && Math.abs(suma - montoNum2) > 0.01) {
+          alert("❗ La suma del monto 1 y monto 2 no coincide con el monto total ingresado.");
+          return;
+        }
+      }
+      
       const transaccionAEnviar = {
         id_usuario,
-        tipo, // 👈 Añadido aquí
+        tipo,
         fecha: origen.fecha,
         monto: montoNumerico,
         categoria: origen.categoria,
         descripcion: origen.descripcion,
         tipoPago: origen.tipoPago,
+        tipoPago2: usarSegundoMetodo || usarSegundoMetodoEditar ? origen.tipoPago2 : null,
+        monto2: usarSegundoMetodo || usarSegundoMetodoEditar
+          ? parseFloat((origen.monto2 || "0").toString().replace(/\./g, "").replace(",", "."))
+          : null,
         cuotas: parseInt(origen.cuotas || 1),
         interes: parseFloat(origen.interes || 0),
         valorCuota: parseFloat(origen.valorCuota || 0),
@@ -710,8 +735,10 @@ export default function Transacciones() {
             </tbody>
           </table>
         </div>
+      )
+      
+      <h3 className="titulo-secundario">Transacciones eliminadas</h3>
 
-        <h3 className="titulo-secundario">Transacciones registradas</h3>
         <div className="lista-transacciones">
         {(() => {
           const filas = [];
@@ -768,9 +795,33 @@ export default function Transacciones() {
                     <div className="selector-tipo-popup">
                       <p>¿Qué deseas agregar?</p>
                       <div className="botones-selector">
-                        <button className="btn-verde" onClick={() => { setTipo("ingreso"); setShowSelectorTipo(false); scrollToForm(); }}>Ingreso</button>
-                        <button className="btn-rojo" onClick={() => { setTipo("gasto"); setShowSelectorTipo(false); scrollToForm(); }}>Gasto</button>
-                        <button className="btn-cancelar" onClick={() => setShowSelectorTipo(false)}>Cancelar</button>
+                        <button
+                          className="btn-ingresogasto"
+                          onClick={() => {
+                            setTipo("ingreso");
+                            setShowSelectorTipo(false);
+                            setMostrarFormulario(true);
+                            scrollToForm();
+                          }}
+                        >
+                          Ingreso
+                        </button>
+
+                        <button
+                          className="btn-ingresogasto"
+                          onClick={() => {
+                            setTipo("gasto");
+                            setShowSelectorTipo(false);
+                            setMostrarFormulario(true);
+                            scrollToForm();
+                          }}
+                        >
+                          Gasto
+                        </button>
+
+                        <button className="btn-rojo" onClick={() => setShowSelectorTipo(false)}>
+                          Cancelar
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -789,9 +840,33 @@ export default function Transacciones() {
                   <div className="selector-tipo-popup">
                     <p>¿Qué deseas agregar?</p>
                     <div className="botones-selector">
-                      <button className="btn-verde" onClick={() => { setTipo("ingreso"); setShowSelectorTipo(false); scrollToForm(); }}>Ingreso</button>
-                      <button className="btn-rojo" onClick={() => { setTipo("gasto"); setShowSelectorTipo(false); scrollToForm(); }}>Gasto</button>
-                      <button className="btn-cancelar" onClick={() => setShowSelectorTipo(false)}>Cancelar</button>
+                      <button
+                        className="btn-ingresogasto"
+                        onClick={() => {
+                          setTipo("ingreso");
+                          setShowSelectorTipo(false);
+                          setMostrarFormulario(true);
+                          scrollToForm();
+                        }}
+                      >
+                        Ingreso
+                      </button>
+
+                      <button
+                        className="btn-ingresogasto"
+                        onClick={() => {
+                          setTipo("gasto");
+                          setShowSelectorTipo(false);
+                          setMostrarFormulario(true);
+                          scrollToForm();
+                        }}
+                      >
+                        Gasto
+                      </button>
+
+                      <button className="btn-rojo" onClick={() => setShowSelectorTipo(false)}>
+                        Cancelar
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -805,6 +880,156 @@ export default function Transacciones() {
         })()}
 
         </div>
+      
+        {mostrarFormulario && (
+          <div className="modal-overlay" onClick={() => setMostrarFormulario(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <h3>Nueva transacción: {tipo === "gasto" ? "Gasto" : "Ingreso"}</h3>
+
+              <div className="grid-formulario">
+                {/* Fecha */}
+                <div>
+                  <label>Fecha:</label>
+                  <input
+                    type="date"
+                    name="fecha"
+                    value={nuevaTransaccion.fecha}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                {/* Categoría */}
+                <div>
+                  <label>Categoría:</label>
+                  <select
+                    name="categoria"
+                    value={nuevaTransaccion.categoria}
+                    onChange={handleChange}
+                  >
+                    {categorias.map((c, i) => (
+                      <option key={i} value={c.nombre}>{c.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Descripción */}
+                <div>
+                  <label>Descripción:</label>
+                  <input
+                    type="text"
+                    name="descripcion"
+                    value={nuevaTransaccion.descripcion}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                {/* Checkbox para usar segundo método */}
+                <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <input
+                    type="checkbox"
+                    id="checkbox-doble-pago"
+                    checked={usarSegundoMetodo}
+                    onChange={(e) => {
+                      const activo = e.target.checked;
+                      setUsarSegundoMetodo(activo);
+                      if (!activo) {
+                        setNuevaTransaccion(prev => ({
+                          ...prev,
+                          tipoPago2: "",
+                          monto2: ""
+                        }));
+                      }
+                    }}
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      cursor: "pointer"
+                    }}
+                  />
+                  <label htmlFor="checkbox-doble-pago" style={{ cursor: "pointer", fontSize: "0.95rem" }}>
+                    ¿Pagar con dos métodos?
+                  </label>
+                </div>
+
+                {/* Métodos de pago */}
+                <div className="fila-metodos-pago">
+                  {/* Tipo de pago principal */}
+                  <div className="campo-tipopago">
+                    <label>Tipo de pago</label>
+                    <select
+                      name="tipoPago"
+                      value={nuevaTransaccion.tipoPago}
+                      onChange={handleChange}
+                    >
+                      <option value="efectivo">Efectivo</option>
+                      <option value="debito">Débito</option>
+                      <option value="credito">Crédito</option>
+                      <option value="transferencia">Transferencia</option>
+                    </select>
+                  </div>
+
+                  {/* Monto principal */}
+                  <div className="campo-monto">
+                    <label>Monto total</label>
+                    <input
+                      type="text"
+                      name="monto"
+                      value={nuevaTransaccion.monto}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  {/* Segundo método de pago (si aplica) */}
+                  {usarSegundoMetodo && (
+                    <>
+                      <div className="campo-tipopago">
+                        <label>Segundo tipo de pago</label>
+                        <select
+                          name="tipoPago2"
+                          value={nuevaTransaccion.tipoPago2}
+                          onChange={handleChange}
+                        >
+                          <option value="">Selecciona</option>
+                          <option value="efectivo">Efectivo</option>
+                          <option value="debito">Débito</option>
+                          <option value="credito">Crédito</option>
+                          <option value="transferencia">Transferencia</option>
+                        </select>
+                      </div>
+
+                      <div className="campo-monto">
+                        <label>Monto 2</label>
+                        <input
+                          type="text"
+                          name="monto2"
+                          value={nuevaTransaccion.monto2}
+                          onChange={handleChange}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Comprobante opcional */}
+                <div>
+                  <label>Comprobante (opcional):</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleChange}
+                    ref={fileInputRef}
+                  />
+                </div>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="acciones-transaccion">
+                <button className="btn-guardar" onClick={enviarTransaccion}>Guardar</button>
+                <button className="btn-cancelar" onClick={() => setMostrarFormulario(false)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
       <h3 className="titulo-secundario">Transacciones eliminadas</h3>
       <ul className="lista-transacciones historial-eliminadas">
@@ -858,10 +1083,6 @@ export default function Transacciones() {
                 <input type="date" name="fecha" value={nuevaTransaccion.fecha} onChange={handleModalChange} />
               </div>
               <div>
-                <label>Monto:</label>
-                <input type="number" name="monto" value={nuevaTransaccion.monto} onChange={handleModalChange} />
-              </div>
-              <div>
                 <label>Categoría:</label>
                 <select name="categoria" value={nuevaTransaccion.categoria} onChange={handleModalChange}>
                   {categorias.map((c, i) => (
@@ -873,55 +1094,134 @@ export default function Transacciones() {
                 <label>Descripción:</label>
                 <input type="text" name="descripcion" value={nuevaTransaccion.descripcion} onChange={handleModalChange} />
               </div>
-              <div>
-                <label>Tipo de pago:</label>
-                <select name="tipoPago" value={nuevaTransaccion.tipoPago} onChange={handleModalChange}>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="credito">Crédito</option>
-                  <option value="debito">Débito</option>
-                  <option value="transferencia">Transferencia</option>
-                </select>
+
+              <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <input
+                  type="checkbox"
+                  id="checkbox-editar-doble"
+                  checked={usarSegundoMetodoEditar}
+                  onChange={(e) => {
+                    const activo = e.target.checked;
+                    setUsarSegundoMetodoEditar(activo);
+                    if (!activo) {
+                      setNuevaTransaccion(prev => ({
+                        ...prev,
+                        tipoPago2: "",
+                        monto2: ""
+                      }));
+                    }
+                  }}
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    cursor: "pointer"
+                  }}
+                />
+                <label htmlFor="checkbox-editar-doble" style={{ cursor: "pointer", fontSize: "0.95rem" }}>
+                  ¿Editar con dos métodos de pago?
+                </label>
+              </div>
+
+              <div className="fila-metodos-pago">
+                {/* Tipo de pago 1 */}
+                <div className="campo-tipopago">
+                  <label htmlFor="tipoPago">Tipo de pago</label>
+                  <select
+                    name="tipoPago"
+                    id="tipoPago"
+                    value={nuevaTransaccion.tipoPago}
+                    onChange={handleChange}
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="debito">Débito</option>
+                    <option value="credito">Crédito</option>
+                    <option value="transferencia">Transferencia</option>
+                  </select>
+                </div>
+
+                {/* Monto total */}
+                <div className="campo-monto">
+                  <label htmlFor="monto">Monto total</label>
+                  <input
+                    type="text"
+                    name="monto"
+                    id="monto"
+                    value={nuevaTransaccion.monto}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                {usarSegundoMetodoEditar && (
+                <>
+                  <div className="campo-tipopago">
+                    <label htmlFor="tipoPago2">Segundo tipo de pago</label>
+                    <select
+                      name="tipoPago2"
+                      id="tipoPago2"
+                      value={nuevaTransaccion.tipoPago2}
+                      onChange={handleChange}
+                    >
+                      <option value="">Selecciona</option>
+                      <option value="efectivo">Efectivo</option>
+                      <option value="debito">Débito</option>
+                      <option value="credito">Crédito</option>
+                      <option value="transferencia">Transferencia</option>
+                    </select>
+                  </div>
+
+                  <div className="campo-monto">
+                    <label htmlFor="monto2">Monto 2</label>
+                    <input
+                      type="text"
+                      name="monto2"
+                      id="monto2"
+                      value={nuevaTransaccion.monto2}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </>
+              )}
               </div>
             </div>
 
             <div className="acciones-transaccion">
-              <button className="btn-editar" onClick={enviarTransaccion}>Guardar cambios</button>
-              <button className="btn-cerrar" onClick={() => setShowModalEditar(false)}>Cancelar</button>
+              <button className="btn-guardar" onClick={enviarTransaccion}>Guardar cambios</button>
+              <button className="btn-cancelar" onClick={() => setShowModalEditar(false)}>Cancelar</button>
             </div>
           </div>
+          
         </div>
       )}
-
-      </main>
-      {showModalImagen && (
-      <div className="modal-overlay" onClick={() => setShowModalImagen(false)}>
-        <div className="modal-imagen" onClick={(e) => e.stopPropagation()}>
-          {imagenModal ? (
-            <img
-              src={imagenModal}
-              alt="Comprobante"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.style.display = "none";
-                const fallback = document.createElement("div");
-                fallback.innerText = "No se pudo cargar el comprobante.";
-                fallback.style.padding = "1rem";
-                fallback.style.color = "#ef4444";
-                e.target.parentNode.appendChild(fallback);
-              }}
-            />
-          ) : (
-            <p style={{ padding: "1rem", color: "#ef4444" }}>
-              No hay comprobante disponible.
-            </p>
-          )}
-          <button className="btn-cerrar-modal" onClick={() => setShowModalImagen(false)}>
-            Cerrar
-          </button>
-        </div>
+        {showModalImagen && (
+          <div className="modal-overlay" onClick={() => setShowModalImagen(false)}>
+            <div className="modal-imagen" onClick={(e) => e.stopPropagation()}>
+              {imagenModal ? (
+                <img
+                  src={imagenModal}
+                  alt="Comprobante"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.style.display = "none";
+                    const fallback = document.createElement("div");
+                    fallback.innerText = "No se pudo cargar el comprobante.";
+                    fallback.style.padding = "1rem";
+                    fallback.style.color = "#ef4444";
+                    e.target.parentNode.appendChild(fallback);
+                  }}
+                />
+              ) : (
+                <p style={{ padding: "1rem", color: "#ef4444" }}>
+                  No hay comprobante disponible.
+                </p>
+              )}
+              <button className="btn-cerrar-modal" onClick={() => setShowModalImagen(false)}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+              </main>
+        <Footer />
       </div>
-    )}
-    <Footer />
-  </div>
-);
+  );
 }
