@@ -9,7 +9,7 @@ import GastosMensuales from "./pages/gastos-mensuales/gastos";
 import Categorias from "./pages/ver-categorias/ver_categorias";
 import MetasAhorro from "./pages/metas-ahorro/metas";
 import RestablecerContrasena from "./pages/recuperar_pw/recuperar_contrasena";
-import PagosPendientes from "./pages/pagos-pendientes/pagos_pendientes";
+import GastosProgramados from "./pages/pagos-programados/pagos_programados";
 
 
 function App() {
@@ -25,7 +25,7 @@ function App() {
         <Route path="/ver-categorias" element={<Categorias />} />
         <Route path="/metas-ahorro" element={<MetasAhorro />} />
         <Route path="/restablecer_contrasena" element={<RestablecerContrasena />} />
-        <Route path="/gastos-pendientes" element={<PagosPendientes />} />
+        <Route path="/gastos_programados" element={<GastosProgramados />} />
       </Routes>
     </Router>
   );

@@ -68,8 +68,7 @@ export default function DashboardFinanciero() {
   const mesActual = mesSeleccionado - 1;
   const anioActual = anioSeleccionado;
   const [fechaSalario, setFechaSalario] = useState(""); // nueva fecha asociada al salario
-
-
+  const [pestanaActiva, setPestanaActiva] = useState("resumen");
   const idUsuario = localStorage.getItem("idUsuario");
   
 
@@ -318,6 +317,10 @@ export default function DashboardFinanciero() {
   const totalAhorros = movimientosAhorro.reduce((acc, mov) => {
     return acc + (mov.tipo === "agregar" ? mov.monto : -mov.monto);
   }, 0);
+
+  useEffect(() => {
+    setAhorros(totalAhorros);
+  }, [totalAhorros]);
   
 
   const handleActualizarNombre = () => {
@@ -343,6 +346,14 @@ export default function DashboardFinanciero() {
     }
   };  
   
+
+  const transaccionesPorFecha = {};
+  transacciones.forEach((t) => {
+    const fecha = new Date(t.fecha).toLocaleDateString("es-CL");
+    if (!transaccionesPorFecha[fecha]) transaccionesPorFecha[fecha] = [];
+    transaccionesPorFecha[fecha].push(t);
+  });
+
 
   const handleActualizarFacturacion = () => {
     const id_usuario = localStorage.getItem("id_usuario");
@@ -597,439 +608,435 @@ export default function DashboardFinanciero() {
     return <p style={{ padding: "2rem", fontSize: "1.2rem" }}>Cargando datos del usuario...</p>;
   }
 
+
   return (
-    <div className="page-layout">
-      <Header />
-      <div className="dashboard-container">
-      <main className="dashboard-main">
-        <aside className="dashboard-sidebar">
+  <div className="page-layout">
+    <Header />
 
+    <div className="dashboard-container">
+      {/* PESTAÑAS */}
+      <div className="tabs">
+        <button
+          className={pestanaActiva === "resumen" ? "tab active" : "tab"}
+          onClick={() => setPestanaActiva("resumen")}
+        >
+          Resumen General
+        </button>
+        <button
+          className={pestanaActiva === "metas" ? "tab active" : "tab"}
+          onClick={() => setPestanaActiva("metas")}
+        >
+          Mis Metas
+        </button>
+        <button
+          className={pestanaActiva === "analisis" ? "tab active" : "tab"}
+          onClick={() => setPestanaActiva("analisis")}
+        >
+          Análisis Mensual
+        </button>
+      </div>
 
-          <div className="dashboard-profile dashboard-card">
-            <h3 className="dashboard-nombre">Bienvenido, {nombreUsuario}</h3>
-            <button onClick={() => setMostrarModalNombre(true)}>Cambiar nombre</button>
-            {mostrarModalNombre && (
-              <div className="modal-overlay">
-                <div className="modal-box">
-                  <h3>Cambiar nombre de usuario</h3>
-                  <input
-                    type="text"
-                    placeholder="Nuevo nombre"
-                    value={nuevoNombreUsuario}
-                    onChange={(e) => setNuevoNombreUsuario(e.target.value)}
-                  />
-                  <div className="modal-buttons">
-                    <button onClick={handleActualizarNombre}>Aceptar</button>
-                    <button onClick={() => {
-                      setMostrarModalNombre(false);
-                      setNuevoNombreUsuario("");
-                    }}>Cancelar</button>
+      {/* CONTENIDO SEGÚN PESTAÑA */}
+      <div className="tab-content">
+
+        {pestanaActiva === "resumen" && (
+          <div className="dashboard-resumen">
+            <h2 className="titulo">Resumen General</h2>
+
+            <div style={{
+              backgroundColor: "#fef3c7",
+              color: "#92400e",
+              padding: "1rem 1.5rem",
+              borderRadius: "1rem",
+              marginBottom: "1rem",
+              fontWeight: "600",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              width: "30%",
+            }}>
+              <span>👋 Bienvenida, <strong>{nombreUsuario}</strong></span>
+              <button className="btn-azul" onClick={() => setMostrarModalNombre(true)}>Cambiar nombre de usuario</button>
+            </div>
+
+            <div className="info-row1 info-grid-3">
+
+              {/* SALARIO */}
+              <div className="info-box compacta fila-horizontal">
+                <div className="texto-horizontal">
+                  <span className="label">Salario:</span>
+                  <span className="valor">${Number(salario).toLocaleString("es-CL")}</span>
+                </div>
+                <button className="btn-azul" onClick={() => setShowModal(true)}>Editar</button>
+              </div>
+
+              {/* AHORROS */}
+              <div className="info-box compacta fila-horizontal">
+                <div className="texto-horizontal">
+                  <span className="label">Ahorros:</span>
+                  <span className="valor">${Number(ahorros).toLocaleString("es-CL")}</span>
+                </div>
+                <div className="btn-group">
+                  <button className="btn-azul" onClick={() => setShowAgregarAhorro(true)}>Añadir</button>
+                  <button className="btn-azul" onClick={() => setShowQuitarAhorro(true)}>Descontar</button>
+                </div>
+              </div>
+
+              {/* FACTURACIÓN */}
+              <div className="info-box compacta fila-horizontal">
+                <div className="texto-horizontal">
+                  <span className="label">Día de facturación:</span>
+                  <span className="valor">{diaFacturacion}</span>
+                </div>
+                <button className="btn-azul" onClick={() => setMostrarModalFacturacion(true)}>Editar</button>
+              </div>
+
+            </div>
+
+              {/* SALDO RESTANTE */}
+              <div className="info-box compacta fila-horizontal">
+                <div className="texto-horizontal">
+                  <span className="label">Saldo restante del mes:</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <span className="valor">
+                      ${saldoAcumulado.length > 0 ? saldoAcumulado[saldoAcumulado.length - 1].toLocaleString("es-CL") : "-"}
+                    </span>
+                    <span className="badge-saldo" style={{
+                      backgroundColor: saldoAcumulado[saldoAcumulado.length - 1] > 0 ? "#d1fae5" : "#fee2e2",
+                      padding: "0.3rem 0.75rem",
+                      borderRadius: "0.5rem",
+                      fontWeight: "600",
+                      color: saldoAcumulado[saldoAcumulado.length - 1] > 0 ? "#065f46" : "#991b1b"
+                    }}>
+                      {saldoAcumulado[saldoAcumulado.length - 1] > 0 ? "Adecuado" : "Alerta"}
+                    </span>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
 
-          <div className="dashboard-consejo-profesional dashboard-card">
-            <div className={`consejo-slide ${animando ? "animando" : ""}`}>
-              <p className="texto-consejo">{consejos[consejoActual]}</p>
-            </div>
-            <div className="controles-consejo">
-            <button
-              className="consejo-btn"
-              onClick={() => {
-                setAnimando(true);
-                setTimeout(() => {
-                  setConsejoActual((prev) => (prev - 1 + consejos.length) % consejos.length);
-                  setAnimando(false);
-                }, 300);
-              }}
-            >
-              ←
-            </button>
-            <button
-              className="consejo-btn"
-              onClick={() => {
-                setAnimando(true);
-                setTimeout(() => {
-                  setConsejoActual((prev) => (prev + 1) % consejos.length);
-                  setAnimando(false);
-                }, 300);
-              }}
-            >
-              →
-            </button>
-            </div>
-          </div>
+              {/* ÚLTIMAS TRANSACCIONES */}
+              <div className="info-box">
+                <span className="label">Últimos movimientos:</span>
+                <div className="info-row" style={{ flexDirection: "column", alignItems: "flex-start", gap: "0.5rem" }}>
+                  {transacciones
+                    .filter(t => t.visible !== false)
+                    .slice(-3)
+                    .reverse()
+                    .map((t, index) => (
+                      <div key={index} style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                        <span>{new Date(t.fecha).toLocaleDateString("es-CL")}</span>
+                        <span>{t.descripcion}</span>
+                        <span style={{ color: t.tipo === "gasto" ? "#b91c1c" : "#15803d" }}>
+                          ${Number(t.monto).toLocaleString("es-CL")}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+                <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
+                  <button className="btn-azul" onClick={() => navigate("/transacciones")}>
+                    Ver más transacciones
+                  </button>
+                </div>
+              </div>
 
-
-          <div style={{
-          backgroundColor: "white",
-          borderRadius: "1rem",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-          padding: "1.5rem",
-          marginBottom: "1rem",
-          textAlign: "center"
-        }}>
-          <h3 style={{ color: "#1e40af", marginBottom: "0.5rem" }}>Balance del mes</h3>
-          <div className="dashboard-box" style={{ fontSize: "1.2rem", display: "inline-block" }}>
-            ${Number(balanceReal || 0).toLocaleString("es-CL")}
-          </div>
-        </div>
-
-          <div className="dashboard-dia-facturacion dashboard-card">
-            <h3>Día de facturación</h3>
-            <div className="dashboard-box">Día {diaFacturacion}</div>
-            <button className="center-button" onClick={() => setMostrarModalFacturacion(true)}>
-              Editar día
-            </button>
-          </div>
-
-          <div className="dashboard-ahorros">
-            <h3>Ahorros</h3>
-            <div className="dashboard-box">
-              ${Number(totalAhorros || 0).toLocaleString("es-CL", { minimumFractionDigits: 0 })}
-            </div>
-            <div className="dashboard-ahorro-btns">
-              <button className="center-button" onClick={() => setShowAgregarAhorro(true)}>Añadir monto</button>
-              <button className="center-button" onClick={() => setShowQuitarAhorro(true)}>Descontar monto</button>
-            </div>
-          </div>
-
-          <button className="chatbot-fab" onClick={() => setShowChatBot(!showChatBot)}>
-            🤖
-          </button>
-
-
-        </aside>
-        
-
-        <div className="dashboard-grafico">
-
-        <div className="dashboard-salario-banner">
-          <div className="salario-banner-contenido">
-            <span className="salario-label">Salario:</span>
-            <span className="salario-cifra">${Number(salario).toLocaleString("es-CL", { minimumFractionDigits: 0 })}</span>
-            <button className="editar-salario" onClick={() => setShowModal(true)}>Editar</button>
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", alignItems: "center" }}>
-          <label>Mes:</label>
-          <select value={mesSeleccionado} onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}>
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>
-                {new Date(0, i).toLocaleString("es-CL", { month: "long" })}
-              </option>
-            ))}
-          </select>
-
-          <label>Año:</label>
-          <select value={anioSeleccionado} onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}>
-            {Array.from({ length: 5 }, (_, i) => {
-              const año = fechaActual.getFullYear() - 2 + i;
-              return <option key={año} value={año}>{año}</option>;
-            })}
-          </select>
-        </div>
-
-          <div style={{ overflowX: "auto", width: "100%" }}>
-            <div style={{ minWidth: "1200px", height: "400px" }}>
-              <Line
-                data={{
-                  labels: datosGrafico.map((d) => d.fecha),
-                  datasets: [
-                    {
-                      label: "Saldo acumulado",
-                      data: saldoAcumulado,
-                      borderColor: "#10b981",
-                      backgroundColor: "rgba(16, 185, 129, 0.2)",
-                      tension: 0.4,
-                      segment: {
-                        borderColor: ctx => {
-                          const { p0, p1 } = ctx;
-                          if (p1.parsed.y < p0.parsed.y) {
-                            return "#ef4444"; // 🔴 Rojo si baja
-                          } else {
-                            return "#10b981"; // 🟢 Verde si sube o se mantiene
-                          }
-                        }
-                      },
-                    },
-                  ],
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: "top",
-                    },
-                    tooltip: {
-                      backgroundColor: function(context) {
-                        const index = context.tooltip.dataPoints[0].dataIndex;
-                        const saldo = context.tooltip.dataPoints[0].parsed.y;
-                        if (index === 0) return "#10b981"; // El primer día siempre verde
-                        const saldoAnterior = context.tooltip.dataPoints[0].dataset.data[index - 1];
-                
-                        return saldo >= saldoAnterior ? "#10b981" : "#ef4444";
-                      },
-                      borderColor: function(context) {
-                        const index = context.tooltip.dataPoints[0].dataIndex;
-                        const saldo = context.tooltip.dataPoints[0].parsed.y;
-                        if (index === 0) return "#10b981";
-                        const saldoAnterior = context.tooltip.dataPoints[0].dataset.data[index - 1];
-                
-                        return saldo >= saldoAnterior ? "#10b981" : "#ef4444";
-                      },
-                      callbacks: {
-                        label: function(context) {
-                          const index = context.dataIndex;
-                          const saldo = context.dataset.data[index];
-                          const fechaLabel = datosGrafico[index]?.fecha;
-                        
-                          let detalles = [];
-                        
-                          // Buscar transacciones normales del día
-                          const transaccionesDelDia = transacciones.filter(t => {
-                            const fechaT = new Date(t.fecha);
-                            const dia = fechaT.getDate().toString().padStart(2, "0");
-                            const mes = (fechaT.getMonth() + 1).toString().padStart(2, "0");
-                            const formato = `${dia}-${mes}`;
-                            return formato === fechaLabel;
-                          });
-                        
-                          transaccionesDelDia.forEach(t => {
-                            if (t.tipo === "ingreso") {
-                              detalles.push(`+$${Number(t.monto).toLocaleString("es-CL")} → (${t.descripcion})`);
-                            } else if (t.tipo === "gasto") {
-                              detalles.push(`-$${Number(t.monto).toLocaleString("es-CL")} → (${t.descripcion})`);
-                            }
-                          });
-                        
-                          // Retornar saldo y luego todos los detalles encontrados
-                          return [`Saldo: $${Number(saldo).toLocaleString("es-CL")}`, ...detalles];
-                        }                                                                  
-                      }                      
-                    }
-                  },
-                  scales: {
-                    x: {
-                      ticks: {
-                        autoSkip: false,
-                      },
-                    },
-                    y: {
-                      beginAtZero: true,
-                    },
-                  },
-                }}                              
-              />
-            </div>
-          </div>
-
-          <div style={{ width: "100%", padding: "30px 0", backgroundColor: "white" }}>
-            <div style={{ width: "90%", margin: "0 auto", maxWidth: "1200px", height: "300px" }}>
-              <Line
-                data={{
-                  labels: datosGrafico.map((d) => d.fecha),
-                  datasets: [
-                    {
-                      label: "Evolución de Ahorros",
-                      data: evolucionAhorro,
-                      borderColor: "#3b82f6",
-                      backgroundColor: "rgba(59, 130, 246, 0.2)",
-                      tension: 0.3,
-                      pointRadius: 2,
-                    },
-                  ],
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { position: "top" },
-                    title: { display: true, text: "Historial de Ahorros" },
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      min: 0,
-                      max: Math.max(100000, ...evolucionAhorro)
-                    },
-                  },                                    
-                }}
-              />
-            </div>
-          </div>
-
-          {metas.length > 0 && (
-            <div className="dashboard-card" style={{ marginTop: "2rem" }}>
-              <h3 style={{ color: "#1e40af", marginBottom: "1rem" }}>Progreso de tus metas</h3>
-              {metas.map((meta) => {
-                const porcentaje = Math.min((totalAhorros / meta.monto_meta) * 100, 100);
-                const faltante = meta.monto_meta - totalAhorros;
-
-                return (
-                  <div key={meta.id_meta} style={{ marginBottom: "1.5rem" }}>
-                    <h4 style={{ fontWeight: 600, marginBottom: "0.25rem" }}>{meta.titulo}</h4>
-                    <p style={{ fontSize: "0.9rem", margin: 0 }}>
-                      Necesitas: ${meta.monto_meta.toLocaleString("es-CL")} &nbsp;|&nbsp;
-                      Llevas: ${Math.min(totalAhorros, meta.monto_meta).toLocaleString("es-CL")} &nbsp;|&nbsp;
-                      Faltan: ${Math.max(faltante, 0).toLocaleString("es-CL")}
-                    </p>
-                    <div style={{
-                      backgroundColor: "#e5e7eb",
-                      borderRadius: "1rem",
-                      overflow: "hidden",
-                      marginTop: "0.5rem",
-                      height: "12px"
-                    }}>
-                      <div style={{
-                        width: `${porcentaje}%`,
-                        backgroundColor: "#2563eb",
-                        height: "100%",
-                        transition: "width 0.3s ease"
-                      }}></div>
+              {mostrarModalNombre && (
+                <div className="modal-overlay">
+                  <div className="modal-box">
+                    <h3>Cambiar nombre</h3>
+                    <input
+                      type="text"
+                      placeholder="Nuevo nombre"
+                      value={nuevoNombreUsuario}
+                      onChange={(e) => setNuevoNombreUsuario(e.target.value)}
+                    />
+                    <div className="modal-buttons">
+                      <button onClick={handleActualizarNombre}>Guardar</button>
+                      <button onClick={() => setMostrarModalNombre(false)}>Cancelar</button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        
+                </div>
+              )}
 
-          {/* Modal: Cambiar día de facturación */}
-          {mostrarModalFacturacion && (
-            <div className="modal-overlay">
-              <div className="modal-box">
-                <h3>Cambiar día de facturación</h3>
+          </div>
+        )}
+
+        {/* MODALES */}
+
+        {showModal && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Editar salario</h3>
+              <input
+                type="text"
+                placeholder="Nuevo salario"
+                value={nuevoSalario}
+                onChange={(e) => {
+                  const limpio = e.target.value.replace(/\./g, '');
+                  if (!isNaN(limpio)) {
+                    const valorFormateado = Number(limpio).toLocaleString("es-CL");
+                    setNuevoSalario(valorFormateado);
+                  }
+                }}
+              />
+              <label>Fecha desde que se aplica el salario:</label>
+              <input
+                type="date"
+                value={fechaSalario}
+                onChange={(e) => setFechaSalario(e.target.value)}
+              />
+              <div className="modal-buttons">
+                <button onClick={handleSave}>Guardar</button>
+                <button onClick={() => setShowModal(false)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showAgregarAhorro && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Añadir monto al ahorro</h3>
+              <input
+                type="text"
+                placeholder="Monto"
+                value={montoAhorro}
+                onChange={(e) => {
+                  const sinPuntos = e.target.value.replace(/\./g, '');
+                  if (!isNaN(sinPuntos)) {
+                    const formateado = Number(sinPuntos).toLocaleString("es-CL");
+                    setMontoAhorro(formateado);
+                  }
+                }}
+              />
+              <label>Fecha:</label>
+              <input
+                type="date"
+                value={fechaAhorro}
+                onChange={(e) => setFechaAhorro(e.target.value)}
+              />
+              <div className="modal-buttons">
+                <button onClick={handleAgregarAhorro}>Guardar</button>
+                <button onClick={() => {
+                  setShowAgregarAhorro(false);
+                  setMontoAhorro("");
+                  setFechaAhorro("");
+                }}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showQuitarAhorro && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Descontar monto del ahorro</h3>
+              <input
+                type="text"
+                placeholder="Monto"
+                value={montoAhorro}
+                onChange={(e) => {
+                  const sinPuntos = e.target.value.replace(/\./g, '');
+                  if (!isNaN(sinPuntos)) {
+                    const formateado = Number(sinPuntos).toLocaleString("es-CL");
+                    setMontoAhorro(formateado);
+                  }
+                }}
+              />
+              <label>Fecha:</label>
+              <input
+                type="date"
+                value={fechaAhorro}
+                onChange={(e) => setFechaAhorro(e.target.value)}
+              />
+              <div className="modal-buttons">
+                <button onClick={handleQuitarAhorro}>Guardar</button>
+                <button onClick={() => {
+                  setShowQuitarAhorro(false);
+                  setMontoAhorro("");
+                  setFechaAhorro("");
+                }}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {mostrarModalFacturacion && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Cambiar día de facturación</h3>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                value={nuevoDiaFacturacion}
+                onChange={(e) => setNuevoDiaFacturacion(e.target.value)}
+              />
+              <div className="modal-buttons">
+                <button onClick={handleActualizarFacturacion}>Guardar</button>
+                <button onClick={() => setMostrarModalFacturacion(false)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pestanaActiva === "metas" && metas.length > 0 && (
+          <div className="dashboard-metas">
+            <h2 className="titulo">Mi Meta de Ahorro</h2>
+            <div className="meta-progreso-box">
+              <h3>{metas[0].titulo}</h3>
+              <p>
+                Meta: ${metas[0].monto_meta.toLocaleString("es-CL")} <br />
+                Fecha límite: {metas[0].fecha_limite}
+              </p>
+              <div className="barra-progreso">
+                <div
+                  className="barra-llenado"
+                  style={{
+                    width: `${Math.min((totalAhorros / metas[0].monto_meta) * 100, 100)}%`,
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pestanaActiva === "analisis" && (
+          <div className="analisis-mensual-wrapper">
+            <div className="dashboard-analisis">
+              <h2 className="titulo">Análisis Mensual</h2>
+              <div className="filtros-fecha-analisis" style={{ marginBottom: "1rem", display: "flex", gap: "1rem", alignItems: "center", width: "fit-content" }}>
+                <label>Mes:</label>
+                <select value={mesSeleccionado} onChange={(e) => setMesSeleccionado(Number(e.target.value))}>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(0, i).toLocaleString("es-CL", { month: "long" })}
+                    </option>
+                  ))}
+                </select>
+
+                <label>Año:</label>
                 <input
                   type="number"
-                  min="1"
-                  max="31"
-                  value={nuevoDiaFacturacion}
-                  onChange={(e) => setNuevoDiaFacturacion(e.target.value)}
+                  value={anioSeleccionado}
+                  onChange={(e) => setAnioSeleccionado(Number(e.target.value))}
+                  style={{ width: "80px" }}
                 />
-                <div className="modal-buttons">
-                  <button onClick={handleActualizarFacturacion}>Guardar</button>
-                  <button onClick={() => setMostrarModalFacturacion(false)}>Cancelar</button>
+              </div>
+
+              {/* Gráfico: Saldo acumulado */}
+              <div className="grafico-contenedor">
+                <h3 className="subtitulo">Saldo acumulado</h3>
+                <div className="grafico-box">
+                  <Line
+                    data={{
+                      labels: datosGrafico.map((d) => d.fecha),
+                      datasets: [
+                        {
+                          label: "Saldo acumulado",
+                          data: saldoAcumulado,
+                          borderColor: "#10b981",
+                          backgroundColor: "rgba(16, 185, 129, 0.2)",
+                          tension: 0.4,
+                          segment: {
+                            borderColor: ctx => {
+                              const { p0, p1 } = ctx;
+                              return p1.parsed.y < p0.parsed.y ? "#ef4444" : "#10b981";
+                            }
+                          },
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { position: "top" },
+                        title: { display: false },
+                        tooltip: {
+                          callbacks: {
+                            label: (context) => {
+                              const index = context.dataIndex;
+                              const fechaLabel = context.label;
+                              const fechaParts = fechaLabel.split("-");
+                              const fechaJS = new Date(`${anioSeleccionado}-${fechaParts[1]}-${fechaParts[0]}`);
+                              const fechaCL = fechaJS.toLocaleDateString("es-CL");
+
+                              const saldo = context.dataset.data[index];
+                              const detalles = transaccionesPorFecha[fechaCL] || [];
+
+                              const resultado = [`Saldo: $${Number(saldo).toLocaleString("es-CL")}`];
+
+                              if (detalles.length > 0) {
+                                detalles.forEach(t => {
+                                  const monto = `$${Number(t.monto).toLocaleString("es-CL")}`;
+                                  if (t.tipo === "ingreso") {
+                                    resultado.push(`🟢 ${t.descripcion} +${monto}`);
+                                  } else {
+                                    resultado.push(`🔴 ${t.descripcion} -${monto}`);
+                                  }
+                                });
+                              }
+
+                              return resultado;
+                            }
+                          }
+                        },
+                      },
+                      scales: {
+                        y: { beginAtZero: true },
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Gráfico: Evolución de Ahorros */}
+              <div className="grafico-contenedor">
+                <h3 className="subtitulo">Evolución de Ahorros</h3>
+                <div className="grafico-box">
+                  <Line
+                    data={{
+                      labels: datosGrafico.map((d) => d.fecha),
+                      datasets: [
+                        {
+                          label: "Evolución de Ahorros",
+                          data: evolucionAhorro,
+                          borderColor: "#3b82f6",
+                          backgroundColor: "rgba(59, 130, 246, 0.2)",
+                          tension: 0.3,
+                          pointRadius: 2,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { position: "top" },
+                        title: { display: false },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          min: 0,
+                          max: Math.max(100000, ...evolucionAhorro),
+                        },
+                      },
+                    }}
+                  />
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Modal: Añadir ahorro */}
-          {showAgregarAhorro && (
-            <div className="modal-overlay">
-              <div className="modal-box">
-                <h3>Añadir monto al ahorro</h3>
-                <input
-                  type="text"
-                  placeholder="Monto"
-                  value={montoAhorro}
-                  onChange={(e) => {
-                    const sinPuntos = e.target.value.replace(/\./g, '');
-                    if (!isNaN(sinPuntos)) {
-                      const formateado = Number(sinPuntos).toLocaleString("es-CL", { useGrouping: true });
-                      setMontoAhorro(formateado);
-                    }
-                  }}
-                />
-                <label>Fecha:</label>
-                <input
-                  type="date"
-                  value={fechaAhorro}
-                  onChange={(e) => setFechaAhorro(e.target.value)}
-                />
-                <div className="modal-buttons">
-                  <button onClick={handleAgregarAhorro}>Guardar</button>
-                  <button onClick={() => {
-                    setShowAgregarAhorro(false);
-                    setMontoAhorro("");
-                    setFechaAhorro("");
-                  }}>Cancelar</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal: Quitar ahorro */}
-          {showQuitarAhorro && (
-            <div className="modal-overlay">
-              <div className="modal-box">
-                <h3>Descontar monto del ahorro</h3>
-                <input
-                  type="text"
-                  placeholder="Monto"
-                  value={montoAhorro}
-                  onChange={(e) => {
-                    const sinPuntos = e.target.value.replace(/\./g, '');
-                    if (!isNaN(sinPuntos)) {
-                      const formateado = Number(sinPuntos).toLocaleString("es-CL", { useGrouping: true });
-                      setMontoAhorro(formateado);
-                    }
-                  }}
-                />
-                <label>Fecha:</label>
-                <input
-                  type="date"
-                  value={fechaAhorro}
-                  onChange={(e) => setFechaAhorro(e.target.value)}
-                />
-                <div className="modal-buttons">
-                  <button onClick={handleQuitarAhorro}>Guardar</button>
-                  <button onClick={() => {
-                    setShowQuitarAhorro(false);
-                    setMontoAhorro("");
-                    setFechaAhorro("");
-                  }}>Cancelar</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal: Editar salario */}
-          {showModal && (
-            <div className="modal-overlay">
-              <div className="modal-box">
-                <h3>Editar salario</h3>
-                <input
-                  type="text"
-                  placeholder="Nuevo salario"
-                  value={nuevoSalario}
-                  onChange={(e) => {
-                    const limpio = e.target.value.replace(/\./g, '');
-                    if (!isNaN(limpio)) {
-                      const valorFormateado = Number(limpio).toLocaleString("es-CL");
-                      setNuevoSalario(valorFormateado);
-                    }
-                  }}                  
-                />
-                <label>Fecha desde que se aplica el salario:</label>
-                <input
-                  type="date"
-                  value={fechaSalario}
-                  onChange={(e) => setFechaSalario(e.target.value)}
-                />
-                <div className="modal-buttons">
-                  <button onClick={handleSave}>Guardar</button>
-                  <button onClick={() => {
-                    setShowModal(false);
-                    setNuevoSalario("");
-                    setFechaSalario("");
-                  }}>Cancelar</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-
-        </div>
-
-      </main>
-        <Footer />
       </div>
     </div>
-  );
+
+
+
+    <Footer />
+  </div>
+);
 }

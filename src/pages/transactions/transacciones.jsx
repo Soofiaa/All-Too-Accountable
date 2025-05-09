@@ -735,7 +735,6 @@ export default function Transacciones() {
             </tbody>
           </table>
         </div>
-      )
       
       <h3 className="titulo-secundario">Transacciones eliminadas</h3>
 
@@ -1020,6 +1019,52 @@ export default function Transacciones() {
                     ref={fileInputRef}
                   />
                 </div>
+                {/* Campos exclusivos de pago con crédito */}
+                  {nuevaTransaccion.tipoPago === "credito" && (
+                    <>
+                      <div>
+                        <label>Cuotas:</label>
+                        <input
+                          type="number"
+                          name="cuotas"
+                          min="1"
+                          value={nuevaTransaccion.cuotas}
+                          onChange={handleChange}
+                        />
+                      </div>
+
+                      <div>
+                        <label>Interés (%):</label>
+                        <input
+                          type="number"
+                          name="interes"
+                          step="0.1"
+                          value={nuevaTransaccion.interes}
+                          onChange={handleChange}
+                        />
+                      </div>
+
+                      <div>
+                        <label>Total Crédito:</label>
+                        <input
+                          type="text"
+                          name="totalCredito"
+                          value={nuevaTransaccion.totalCredito}
+                          readOnly
+                        />
+                      </div>
+
+                      <div>
+                        <label>Valor por Cuota:</label>
+                        <input
+                          type="text"
+                          name="valorCuota"
+                          value={nuevaTransaccion.valorCuota}
+                          readOnly
+                        />
+                      </div>
+                    </>
+                  )}
               </div>
 
               {/* Botones de acción */}
@@ -1163,9 +1208,10 @@ export default function Transacciones() {
                     >
                       <option value="">Selecciona</option>
                       <option value="efectivo">Efectivo</option>
+                      <option value="transferencia">Transferencia</option>
                       <option value="debito">Débito</option>
                       <option value="credito">Crédito</option>
-                      <option value="transferencia">Transferencia</option>
+                      <option value="contribucion tarjeta de credito">Contribución Tarjeta de Crédito</option>
                     </select>
                   </div>
 

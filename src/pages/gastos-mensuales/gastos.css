@@ -1,31 +1,28 @@
+/* === CONTENEDOR PRINCIPAL === */
 .page-layout {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 
-.metas-ahorro-container {
-  flex: 1;
-  padding: 2rem;
-}
-
-.gastos-mensuales-container {
-  font-family: 'Segoe UI', sans-serif;
+.categorias-container {
   background-color: #f9fafb;
-  color: #333;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  font-family: 'Segoe UI', sans-serif;
+  color: #333;
   padding: 2rem;
 }
 
 .contenido {
   width: 100%;
-  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 2rem;
 }
 
-.titulo-gm {
+.titulo-categorias {
   font-size: 1.5rem;
   font-weight: 700;
   color: #1e40af;
@@ -46,37 +43,35 @@
   background-color: #2563eb;
 }
 
-.tabla-gastos {
+.tabla-categorias {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  border-radius: 10px;
-  overflow: hidden;
   background-color: white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
-.tabla-gastos th,
-.tabla-gastos td {
+.tabla-categorias th,
+.tabla-categorias td {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #e5e7eb;
   text-align: left;
+  background-color: white;
 }
 
-.tabla-gastos th {
+.tabla-categorias th {
   background-color: #f3f4f6;
   font-weight: 600;
   color: #111827;
 }
 
+.tabla-categorias tr:last-child td {
+  border-bottom: none;
+}
+
 .acciones {
   display: flex;
   gap: 0.5rem;
-}
-
-.btn-listo {
-  background-color: #10b981;
-  color: white;
 }
 
 .btn-editar {
@@ -117,10 +112,9 @@
   width: 90%;
   max-width: 500px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  text-align: center;
 }
 
-.modal-box h3 {
+.modal-titulo {
   font-size: 1.4rem;
   margin-bottom: 1.5rem;
   color: #1e40af;
@@ -135,7 +129,8 @@
   color: #374151;
 }
 
-.modal-box input {
+.modal-box input,
+.modal-box select {
   padding: 0.5rem;
   margin-top: 0.25rem;
   border: 1px solid #ccc;
@@ -143,29 +138,27 @@
   font-size: 1rem;
 }
 
-.modal-buttons {
+.modal-acciones {
   display: flex;
   justify-content: center;
   gap: 1rem;
   margin-top: 1rem;
 }
 
-.modal-buttons button {
+.modal-acciones button {
   padding: 0.5rem 1.5rem;
   border-radius: 10px;
   border: none;
   font-weight: 600;
   cursor: pointer;
-  background-color: #e5e7eb;
-  color: #1e3a8a;
-  transition: background 0.2s ease;
 }
 
-.modal-buttons button:first-child {
+.btn-aceptar {
   background-color: #3b82f6;
   color: white;
 }
 
-.modal-buttons button:hover {
-  filter: brightness(0.95);
+.btn-cancelar {
+  background-color: #e5e7eb;
+  color: #1e3a8a;
 }

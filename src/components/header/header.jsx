@@ -30,7 +30,7 @@ export default function Header() {
           <button className="nav-button" onClick={() => navigate("/transacciones")}>Transacciones</button>
           <button className="nav-button" onClick={() => navigate("/ver-categorias")}>Categorias</button>
           <button className="nav-button" onClick={() => navigate("/gastos-mensuales")}>Gastos mensuales</button>
-          <button className="nav-button" onClick={() => navigate("/gastos-pendientes")}>Gastos pendientes</button>
+          <button className="nav-button" onClick={() => navigate("/gastos_programados")}>Gastos programados</button>
           <button className="nav-button" onClick={() => navigate("/metas-ahorro")}>Metas de ahorro</button>
           <button className="nav-button logout-button" onClick={handleLogout}>
             Cerrar sesión

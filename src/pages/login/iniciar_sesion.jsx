@@ -12,24 +12,24 @@ export default function IniciarSesion() {
 
   const handleLogin = async (event) => {
     event.preventDefault();
-  
-    const correo = event.target[0].value;
-    const contrasena = event.target[1].value;
-  
+
     try {
       const respuesta = await fetch("http://localhost:5000/api/usuarios/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ correo, contrasena })
+        body: JSON.stringify({
+          correo: email,
+          contrasena: password
+        })
       });
-  
+
       const data = await respuesta.json();
-  
+
       if (!respuesta.ok) {
         alert(data.error || "Credenciales inválidas");
         return;
       }
-      
+
       console.log("Datos recibidos del backend:", data);
       localStorage.setItem("id_usuario", data.usuario.id_usuario);
       localStorage.setItem("nombre_usuario", data.usuario.nombre_usuario);
@@ -38,7 +38,8 @@ export default function IniciarSesion() {
       console.error("Error al iniciar sesión:", error);
       alert("Hubo un error al iniciar sesión");
     }
-  };    
+  };
+    
 
   const handleCreateAccount = () => {
     // Lógica para crear una cuenta
