@@ -58,6 +58,36 @@ export default function Transacciones() {
   const [usarSegundoMetodoEditar, setUsarSegundoMetodoEditar] = useState(false);
 
 
+  const cargarTodasTransacciones = async () => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+
+    const [normales, programadosRaw] = await Promise.all([
+      fetch(`http://localhost:5000/api/transacciones/${id_usuario}/todas`).then(res => res.json()),
+      fetch(`http://localhost:5000/api/pagos_programados/${id_usuario}`).then(res => res.json())
+    ]);
+
+    const programados = programadosRaw.map((g) => ({
+      id_transaccion: `gp-${g.id_gasto_programado}`,
+      fecha: g.fecha_emision,
+      monto: g.monto,
+      categoria: "Gasto programado",
+      descripcion: g.descripcion,
+      tipo: "gasto",
+      tipoPago: g.tipo_pago,
+      visible: true,
+      imagen: null,
+      esProgramado: true
+    }));
+
+    const combinadas = [...normales, ...programados].filter(t => t.visible);
+    combinadas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    setTransacciones(combinadas);
+    setEliminadas(normales.filter(t => t.visible === 0 || t.visible === false));
+  };
+
+
   useEffect(() => {
     if (!nuevaTransaccion.mesPago) {
       setNuevaTransaccion((prev) => ({ ...prev, mesPago: getMesActual() }));
@@ -72,6 +102,7 @@ export default function Transacciones() {
     fetch(`http://localhost:5000/api/transacciones/categorias/${id_usuario}`)
       .then(res => res.json())
       .then(data => {
+        console.log("🧾 Categorías cargadas:", data);
         setCategorias(data);
       })
       .catch(err => {
@@ -81,30 +112,9 @@ export default function Transacciones() {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
-  
-    if (!id_usuario) {
-      console.error("ID de usuario no encontrado en localStorage");
-      return;
-    }
-  
-    fetch(`http://localhost:5000/api/transacciones/${id_usuario}/todas`)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Error al cargar transacciones: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(data => {
-        setTransacciones(data.filter(t => t.visible === true || t.visible === 1));
-        setEliminadas(data.filter(t => t.visible === false || t.visible === 0));
-        console.log("🗑️ Eliminadas:", data.filter(t => t.visible === 0 || t.visible === false));
-      })
-      .catch(error => {
-        console.error("Error al cargar transacciones:", error);
-      });
-  }, []);
-  
+    cargarTodasTransacciones();
+  }, [mesFiltrado, anioFiltrado]);
+
 
   useEffect(() => {
     console.log("💬 Eliminadas:", eliminadas);
@@ -141,24 +151,31 @@ export default function Transacciones() {
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
-  
+
     fetch(`http://localhost:5000/api/gastos_mensuales?id_usuario=${id_usuario}`)
       .then(res => res.json())
       .then(data => {
+        const hoy = new Date();
         const mesF = parseInt(mesFiltrado);
         const anioF = parseInt(anioFiltrado);
-  
+
         const gastosFiltrados = data
           .filter(gasto => {
             if (!gasto.fecha_creacion || !gasto.dia_pago) return false;
-  
+
             const [anioCreado, mesCreado] = gasto.fecha_creacion.split("-").map(Number);
-  
-            // Mostrar el gasto si el mes filtrado es igual o posterior al mes de creación
-            return anioF > anioCreado || (anioF === anioCreado && mesF >= mesCreado);
+            const correspondePorFecha = (
+              anioF > anioCreado ||
+              (anioF === anioCreado && mesF >= mesCreado)
+            );
+
+            const fechaCobro = new Date(anioF, mesF - 1, gasto.dia_pago);
+            const yaFueCobrado = fechaCobro <= hoy;
+
+            return correspondePorFecha && yaFueCobrado;
           })
           .map(gasto => {
-            const fechaCobro = `${anioFiltrado}-${String(mesFiltrado).padStart(2, "0")}-${String(gasto.dia_pago).padStart(2, "0")}`;
+            const fechaCobro = `${anioF}-${String(mesF).padStart(2, "0")}-${String(gasto.dia_pago).padStart(2, "0")}`;
             return {
               id_transaccion: `gm-${gasto.id_gasto}`,
               fecha: fechaCobro,
@@ -172,13 +189,13 @@ export default function Transacciones() {
               esMensual: true
             };
           });
-  
+
         setGastosMensuales(gastosFiltrados);
       })
       .catch(error => {
         console.error("Error al cargar gastos mensuales:", error);
       });
-  }, [mesFiltrado, anioFiltrado]);    
+  }, [mesFiltrado, anioFiltrado]);  
 
 
   const scrollToForm = () => {
@@ -212,6 +229,15 @@ export default function Transacciones() {
     return `${año}-${mes}`;
   };
   
+  const obtenerSemana = (fechaStr) => {
+    const fecha = new Date(fechaStr);
+    const dia = fecha.getDate();
+    if (dia <= 7) return "Semana 1";
+    if (dia <= 14) return "Semana 2";
+    if (dia <= 21) return "Semana 3";
+    return "Semana 4";
+  };
+
 
   const formatearConPuntos = (valor) => {
     const soloNumeros = valor.replace(/\D/g, "");
@@ -250,6 +276,13 @@ export default function Transacciones() {
   
   // Ordenar fuera del .filter
   transaccionesFiltradas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+  const transaccionesPorSemana = transaccionesFiltradas.reduce((grupo, trans) => {
+    const semana = obtenerSemana(trans.fecha);
+    if (!grupo[semana]) grupo[semana] = [];
+    grupo[semana].push(trans);
+    return grupo;
+  }, {});
     
   
   const handleModalChange = (e) => {
@@ -319,23 +352,20 @@ export default function Transacciones() {
       alert("Usuario no autenticado");
       return;
     }
-  
+
     const origen = nuevaTransaccion;
     const esEdicion = editIndex !== null;
-  
+
     const camposObligatorios = ["fecha", "monto", "categoria", "descripcion", "tipoPago"];
     const faltantes = camposObligatorios.filter((campo) => !origen[campo]);
     if (faltantes.length > 0) {
       alert("Por favor completa todos los campos obligatorios.");
       return;
     }
-  
-    // Comprobación de límite mensual por categoría
+
     const categoriaSeleccionada = categorias.find(cat => cat.nombre === origen.categoria);
-  
     if (categoriaSeleccionada && categoriaSeleccionada.monto_limite && categoriaSeleccionada.monto_limite !== 0) {
-      const montoNuevo = parseFloat((origen.monto || "0").toString().replace(/\./g, "").replace(",", ".")) || 0;
-  
+      const montoNuevo = parseFloat((origen.monto || "0").toString().replace(/\./g, "").replace(",", "."));
       const transaccionesMismoMesYCategoria = transacciones.filter(t => {
         const fechaT = new Date(t.fecha);
         const fechaNueva = new Date(origen.fecha);
@@ -345,94 +375,90 @@ export default function Transacciones() {
           fechaT.getFullYear() === fechaNueva.getFullYear()
         );
       });
-  
+
       const montoAcumulado = transaccionesMismoMesYCategoria.reduce((total, t) => {
         return total + parseFloat(t.monto.toString().replace(/\./g, "").replace(",", "."));
       }, 0);
-  
+
       if ((montoAcumulado + montoNuevo) > categoriaSeleccionada.monto_limite) {
         alert("🚨 Atención: El monto ingresado supera el límite mensual para esta categoría.");
       }
     }
-  
+
     let imagenBase64 = null;
     if (origen.imagen instanceof File) {
       imagenBase64 = await convertirA_base64(origen.imagen);
     } else if (origen.imagen === null || origen.imagen === "") {
       imagenBase64 = null;
     }
-  
+
     const montoNumerico = typeof origen.monto === "string"
       ? parseFloat(origen.monto.replace(/\./g, "").replace(",", "."))
       : parseFloat(origen.monto);
 
-      if (usarSegundoMetodo || usarSegundoMetodoEditar) {
-        const monto1 = origen.monto;
-        const monto2 = origen.monto2 || "0";
-      
-        const montoNum1 = parseFloat((monto1 || "0").toString().replace(/\./g, "").replace(",", "."));
-        const montoNum2 = parseFloat((monto2 || "0").toString().replace(/\./g, "").replace(",", "."));
-      
-        const suma = montoNum1 + montoNum2;
-      
-        if (Math.abs(suma - montoNum1) > 0.01 && Math.abs(suma - montoNum2) > 0.01) {
-          alert("❗ La suma del monto 1 y monto 2 no coincide con el monto total ingresado.");
-          return;
-        }
+    if (usarSegundoMetodo || usarSegundoMetodoEditar) {
+      const monto1 = origen.monto;
+      const monto2 = origen.monto2 || "0";
+
+      const montoNum1 = parseFloat((monto1 || "0").toString().replace(/\./g, "").replace(",", "."));
+      const montoNum2 = parseFloat((monto2 || "0").toString().replace(/\./g, "").replace(",", "."));
+
+      const suma = montoNum1 + montoNum2;
+
+      if (Math.abs(suma - montoNum1) > 0.01 && Math.abs(suma - montoNum2) > 0.01) {
+        alert("❗ La suma del monto 1 y monto 2 no coincide con el monto total ingresado.");
+        return;
       }
-      
-      const transaccionAEnviar = {
-        id_usuario,
-        tipo,
-        fecha: origen.fecha,
-        monto: montoNumerico,
-        categoria: origen.categoria,
-        descripcion: origen.descripcion,
-        tipoPago: origen.tipoPago,
-        tipoPago2: usarSegundoMetodo || usarSegundoMetodoEditar ? origen.tipoPago2 : null,
-        monto2: usarSegundoMetodo || usarSegundoMetodoEditar
-          ? parseFloat((origen.monto2 || "0").toString().replace(/\./g, "").replace(",", "."))
-          : null,
-        cuotas: parseInt(origen.cuotas || 1),
-        interes: parseFloat(origen.interes || 0),
-        valorCuota: parseFloat(origen.valorCuota || 0),
-        totalCredito: parseFloat(origen.totalCredito || 0),
-        imagen: imagenBase64,
-        nombre_archivo: origen.imagen?.name || null
-      };      
-  
+    }
+
+    const transaccionAEnviar = {
+      id_usuario,
+      tipo,
+      fecha: origen.fecha,
+      monto: montoNumerico,
+      categoria: origen.categoria,
+      descripcion: origen.descripcion,
+      tipoPago: origen.tipoPago,
+      tipoPago2: usarSegundoMetodo || usarSegundoMetodoEditar ? origen.tipoPago2 : null,
+      monto2: usarSegundoMetodo || usarSegundoMetodoEditar
+        ? parseFloat((origen.monto2 || "0").toString().replace(/\./g, "").replace(",", "."))
+        : null,
+      cuotas: parseInt(origen.cuotas || 1),
+      interes: parseFloat(origen.interes || 0),
+      valorCuota: parseFloat(origen.valorCuota || 0),
+      totalCredito: parseFloat(origen.totalCredito || 0),
+      imagen: imagenBase64,
+      nombre_archivo: origen.imagen?.name || null
+    };
+
     try {
       if (esEdicion) {
-        const id_transaccion = editIndex; // ✅ porque ahora editIndex ES el ID
-      
+        const id_transaccion = editIndex;
+
         await fetch(`http://localhost:5000/api/transacciones/${id_transaccion}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(transaccionAEnviar)
         });
-      
-        // ACTUALIZAR LOCALMENTE por ID
+
         const nuevasTransacciones = transacciones.map((t) =>
           t.id_transaccion === id_transaccion
             ? { ...t, ...transaccionAEnviar }
             : t
         );
-        setTransacciones(nuevasTransacciones);      
+        setTransacciones(nuevasTransacciones);
+
       } else {
         await fetch(`http://localhost:5000/api/transacciones`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(transaccionAEnviar)
         });
-  
-        const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
-        const data = await respuesta.json();
-        setTransacciones(data.filter(t => t.visible !== false));
-        setEliminadas(data.filter(t => t.visible === 0 || t.visible === false));
-        console.log("🗑️ Eliminadas:", data.filter(t => t.visible === 0 || t.visible === false));
+
+        await cargarTodasTransacciones(); // ✅ vuelve a cargar normales + programados
       }
-  
-      // 🔵 Limpiar formulario
+
+      // 🧹 Limpiar y cerrar modal
       setEditIndex(null);
       setNuevaTransaccion({
         fecha: "",
@@ -447,9 +473,10 @@ export default function Transacciones() {
         totalCredito: "",
         valorCuota: ""
       });
-  
+
       if (fileInputRef.current) fileInputRef.current.value = "";
-  
+      setMostrarFormulario(false); // ✅ cerrar modal
+
     } catch (error) {
       console.error("Error al guardar transacción:", error);
       alert("❌ Error al guardar la transacción");
@@ -471,24 +498,24 @@ export default function Transacciones() {
 
 
   const eliminarTransaccion = async (id) => {
+    const confirmado = window.confirm("¿Deseas eliminar esta transacción?");
+    if (!confirmado) return;
+
     try {
       await fetch(`http://localhost:5000/api/transacciones/${id}/eliminar`, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" }
       });
-  
-      const id_usuario = localStorage.getItem("id_usuario");
-      const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
-      const data = await respuesta.json();
-  
-      setTransacciones(data.filter(t => t.visible));
-      setEliminadas(data.filter(t => t.visible === 0 || t.visible === false));
-      console.log("🗑️ Eliminadas:", data.filter(t => t.visible === 0 || t.visible === false));
+
+      // ✅ Re-carga todo el contenido después de eliminar
+      await cargarTodasTransacciones();
     } catch (error) {
       console.error("Error al eliminar transacción:", error);
-      alert("❌ Error al eliminar la transacción");
+      alert("❌ No se pudo eliminar la transacción.");
     }
-  };      
+  };     
   
+
   const exportarTransacciones = (mesExportar, anioExportar, formato) => {
     const filtradas = transacciones.filter((t) => {
       const fuente = t.mesPago || t.fecha; // usar fecha si mesPago no existe
@@ -590,24 +617,36 @@ export default function Transacciones() {
   const recuperarTransaccion = async (id) => {
     try {
       const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id}/recuperar`, {
-        method: "PUT"
+        method: "PUT",
+        headers: { "Content-Type": "application/json" }
       });
-  
-      if (!respuesta.ok) throw new Error("Error al recuperar");
-  
-      const id_usuario = localStorage.getItem("id_usuario");
-      const resp = await fetch(`http://localhost:5000/api/transacciones/${id_usuario}`);
-      const data = await resp.json();
-  
-      setTransacciones(data.filter(t => t.visible !== false));
-      setEliminadas(data.filter(t => t.visible === 0 || t.visible === false));
-      console.log("🗑️ Eliminadas:", data.filter(t => t.visible === 0 || t.visible === false));
+
+      if (!respuesta.ok) {
+        throw new Error("No se pudo recuperar la transacción");
+      }
+
+      await cargarTodasTransacciones(); // ✅ esto actualiza todo el frontend
     } catch (error) {
-      console.error("Error al recuperar transacción:", error);
-      alert("❌ No se pudo recuperar la transacción");
+      console.error("❌ Error al recuperar transacción:", error);
+      alert("Ocurrió un error al intentar recuperar la transacción.");
     }
   };
   
+  const borrarDefinitivamente = async (id) => {
+    try {
+      await fetch(`http://localhost:5000/api/transacciones/${id}/borrar_definitivo`, {
+        method: "DELETE"
+      });
+
+      // Quitar del estado eliminadas
+      setEliminadas(prev => prev.filter(t => t.id !== id && t.id_transaccion !== id));
+    } catch (error) {
+      console.error("❌ Error al borrar definitivamente:", error);
+      alert("No se pudo borrar la transacción permanentemente");
+    }
+  };
+
+
   const eliminadasFiltradas = eliminadas.filter((t) => {
     const fuente = t.mesPago || t.fecha;
     if (!fuente || !fuente.includes("-")) return false;
@@ -736,7 +775,7 @@ export default function Transacciones() {
           </table>
         </div>
       
-      <h3 className="titulo-secundario">Transacciones eliminadas</h3>
+      <h3 className="titulo-secundario">Transacciones registradas</h3>
 
         <div className="lista-transacciones">
         {(() => {
@@ -746,10 +785,20 @@ export default function Transacciones() {
 
             fila.forEach((t, index) => {
               filas.push(
-                <div className={`tarjeta-minimal ${t.esMensual ? "gasto-mensual" : ""} ${t.tipoPago === "credito" ? "transaccion-credito" : ""}`} key={i + index}>
+                <div className={`tarjeta-minimal ${t.esMensual ? "gasto-mensual" : ""} ${t.esProgramado ? "esProgramado" : ""} ${t.tipoPago === "credito" ? "transaccion-credito" : ""}`} key={i + index}>
                   <div className="fila-superior">
-                    <div className={`tag ${t.categoria === "Gasto mensual" ? "gasto-mensual" : t.tipo}`}>
-                      {t.categoria === "Gasto mensual" ? "GASTO MENSUAL" : t.tipo.toUpperCase()}
+                    <div className={`tag ${
+                      t.categoria === "Gasto mensual"
+                        ? "gasto-mensual"
+                        : t.categoria === "Gasto programado"
+                        ? "gasto-programado"
+                        : t.tipo
+                    }`}>
+                      {t.categoria === "Gasto mensual"
+                        ? "GASTO MENSUAL"
+                        : t.categoria === "Gasto programado"
+                        ? "GASTO PROGRAMADO"
+                        : t.tipo.toUpperCase()}
                     </div>
                     <div className="fecha">{formatearFechaBonita(t.fecha)}</div>
                   </div>
@@ -905,9 +954,16 @@ export default function Transacciones() {
                     value={nuevaTransaccion.categoria}
                     onChange={handleChange}
                   >
-                    {categorias.map((c, i) => (
-                      <option key={i} value={c.nombre}>{c.nombre}</option>
-                    ))}
+                    {categorias
+                      .filter(c => {
+                        if (!c.tipo) return false;
+                        const tipoCategoria = c.tipo.toLowerCase();
+                        return tipoCategoria === tipo || tipoCategoria === "ambos";
+                      })
+                      .sort((a, b) => a.nombre === "General" ? -1 : b.nombre === "General" ? 1 : 0)
+                      .map((c, i) => (
+                        <option key={i} value={c.nombre}>{c.nombre}</option>
+                      ))}
                   </select>
                 </div>
 
@@ -1110,6 +1166,16 @@ export default function Transacciones() {
                 <div className="boton-inferior">
                 <button className="btn-recuperar" onClick={() => recuperarTransaccion(t.id || t.id_transaccion)}>
                   Recuperar
+                </button>
+                <button
+                  className="btn-recuperar"
+                  style={{ backgroundColor: "#dc2626", marginLeft: "0.5rem" }}
+                  onClick={() => {
+                    const confirmado = window.confirm("¿Estás segura de eliminar esta transacción permanentemente?");
+                    if (confirmado) borrarDefinitivamente(t.id || t.id_transaccion);
+                  }}
+                >
+                  Eliminar definitivamente
                 </button>
                 </div>
               </div>

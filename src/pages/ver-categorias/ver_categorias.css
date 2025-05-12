@@ -29,7 +29,7 @@
 }
 
 .btn-agregar {
-  background-color: #3b82f6;
+  background-color: #3b82f6 !important; 
   color: white;
   padding: 0.5rem 1rem;
   border: none;
@@ -74,7 +74,7 @@
 }
 
 .btn-editar {
-  background-color: #facc15;
+  background-color: #ffd501 !important;
   color: #333;
   border-radius: 6px;
   border: none;

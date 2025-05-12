@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./gastos.css";
-import Header from "../../components/header/header";
-import Footer from "../../components/footer/footer";
+import Header from "../../../components/header/header";
+import Footer from "../../../components/footer/footer";
 
 const GastosMensuales = () => {
   const [gastos, setGastos] = useState([]);

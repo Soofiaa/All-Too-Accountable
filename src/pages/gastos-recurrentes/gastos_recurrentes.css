@@ -1,0 +1,118 @@
+.page-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.page-layout > footer {
+  margin-top: auto;
+}
+
+.contenido {
+  max-width: 1000px;
+  padding: 1rem;
+}
+
+.tabla-pagos {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+  table-layout: auto;
+}
+
+.contenedor-pagos {
+  width: 90%;
+  max-width: 1000px;
+  margin: auto;
+  margin-top: 2rem;
+  background-color: #f9fafb;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.titulo-pagos {
+  text-align: left;
+  font-size: 1.6rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.tabla-pagos {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+}
+
+.tabla-pagos th {
+  text-align: left;
+  padding: 0.5rem 1rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.tabla-pagos td {
+  background-color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.btn-editar,
+.btn-eliminar {
+  margin-right: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-editar {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-editar:hover {
+  background-color: #005fc3;
+}
+
+.btn-eliminar {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-eliminar:hover {
+  background-color: #a52835;
+}
+
+.btn-agregar {
+  margin-top: 1.5rem;
+  background-color: #28a745;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.btn-agregar:hover {
+  background-color: #218838;
+}
+
+.alerta-vencimiento {
+  background-color: #fef9c3;
+  border: 1px solid #facc15;
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  color: #92400e;
+}
+
+.tabla-categorias td:nth-child(3) {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  max-width: none;
+}

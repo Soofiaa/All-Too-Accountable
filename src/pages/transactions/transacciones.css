@@ -1225,3 +1225,14 @@ label.required::after {
   cursor: pointer;
   font-weight: 600;
 }
+
+.tag.gasto-programado {
+  background-color: #8b5cf6;
+  color: white;
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

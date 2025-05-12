@@ -69,9 +69,9 @@ export default function DashboardFinanciero() {
   const anioActual = anioSeleccionado;
   const [fechaSalario, setFechaSalario] = useState(""); // nueva fecha asociada al salario
   const [pestanaActiva, setPestanaActiva] = useState("resumen");
-  const idUsuario = localStorage.getItem("idUsuario");
-  
+  const idUsuario = localStorage.getItem("id_usuario");
 
+  
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
@@ -131,95 +131,86 @@ export default function DashboardFinanciero() {
 
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
-    if (!id_usuario) {
-      console.error("ID de usuario no encontrado en localStorage");
-      return;
-    }
-  
-    fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
-      .then(res => res.json())
+    if (!id_usuario) return;
+
+    fetch(`http://localhost:5000/api/transacciones_completas?id_usuario=${id_usuario}&mes=${mesSeleccionado}&anio=${anioSeleccionado}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Error al obtener transacciones completas");
+        return res.json();
+      })
       .then(data => {
         setTransacciones(data);
         verificarYDepositarSalario(data);
         registrarSaldoSobranteSiCorresponde();
       })
-      .catch(error => console.error("Error al cargar transacciones:", error));
-  }, []);
+      .catch(error => {
+        console.error("❌ Error al cargar transacciones completas:", error);
+      });
+  }, [mesSeleccionado, anioSeleccionado]);
 
 
   useEffect(() => {
     if (!transacciones.length) return;
-  
-    const agrupados = {};
-  
+
+    const datosPorDia = {};
+
     transacciones
-      .filter(t => t.visible !== false) // Solo visibles
+      .filter(t => t.visible !== false)
       .forEach((t) => {
-        const fecha = new Date(t.fecha);
-        let clave;
-  
-        if (modoGrafico === "mensual") {
-          if (
-            fecha.getMonth() + 1 === mesSeleccionado &&
-            fecha.getFullYear() === anioSeleccionado
-          ) {
-            clave = fecha.getDate().toString().padStart(2, "0") + "-" + (fecha.getMonth() + 1).toString().padStart(2, "0");
-          }
-        } else {
-          clave = (fecha.getMonth() + 1).toString().padStart(2, "0") + "-" + fecha.getFullYear();
+        const [anio, mes, dia] = t.fecha.split("-");
+        const clave = `${dia.padStart(2, "0")}-${mes.padStart(2, "0")}`;
+
+        if (!datosPorDia[clave]) {
+          datosPorDia[clave] = { ingresos: 0, gastos: 0, transacciones: [] };
         }
-  
-        if (clave) {
-          if (!agrupados[clave]) {
-            agrupados[clave] = { ingreso: 0, gasto: 0 };
-          }
-  
-          if (t.tipo === "ingreso") {
-            agrupados[clave].ingreso += parseFloat(t.monto);
-          } else {
-            // ❌ Excluir gastos a crédito en cuotas del gráfico
-            if (!(t.tipoPago === "credito" && parseInt(t.cuotas) > 1)) {
-              agrupados[clave].gasto += parseFloat(t.monto);
-            }
-          }
+
+        const monto = Number(t.monto);
+        if (t.tipo === "ingreso") {
+          datosPorDia[clave].ingresos += monto;
+        } else if (t.tipo === "gasto") {
+          datosPorDia[clave].gastos += monto;
         }
+
+        datosPorDia[clave].transacciones.push(t);
       });
-  
-    let datos = [];
-  
-    if (modoGrafico === "mensual") {
-      const diasEnMes = new Date(anioSeleccionado, mesSeleccionado, 0).getDate();
-  
-      for (let dia = 1; dia <= diasEnMes; dia++) {
-        const clave = dia.toString().padStart(2, "0") + "-" + mesSeleccionado.toString().padStart(2, "0");
-  
-        datos.push({
-          fecha: clave,
-          ingreso: agrupados[clave]?.ingreso || 0,
-          gasto: agrupados[clave]?.gasto || 0,
-        });
-      }
-  
-      // Agregamos el salario el día 1
-      if (datos.length > 0) {
-        datos[0].ingreso += salario;
-      }
-    } else {
-      datos = Object.entries(agrupados)
-        .sort(([fechaA], [fechaB]) => fechaA.localeCompare(fechaB))
-        .map(([fecha, valores]) => ({
-          fecha,
-          ingreso: valores.ingreso,
-          gasto: valores.gasto,
+
+    const diasEnMes = new Date(anioSeleccionado, mesSeleccionado, 0).getDate();
+    const datos = [];
+
+    for (let dia = 1; dia <= diasEnMes; dia++) {
+      const clave = `${String(dia).padStart(2, "0")}-${String(mesSeleccionado).padStart(2, "0")}`;
+      const ingreso = Number(datosPorDia[clave]?.ingresos || 0);
+      const gasto = Number(datosPorDia[clave]?.gastos || 0);
+
+      // incluir salario si es día 1
+      const ingresoFinal = dia === 1 ? ingreso + Number(salario || 0) : ingreso;
+
+      // gastos mensuales ese día
+      const gastosMensualesHoy = gastosMensuales
+        .filter(g => Number(g.dia_pago) === dia)
+        .map(g => ({
+          tipo: "gasto",
+          descripcion: g.nombre || "Gasto mensual",
+          monto: Number(g.monto),
+          esMensual: true
         }));
-  
-      if (datos.length > 0) {
-        datos[0].ingreso += salario;
-      }
+
+      // combinar transacciones y gastos mensuales
+      const transaccionesTotales = [
+        ...(datosPorDia[clave]?.transacciones || []),
+        ...gastosMensualesHoy
+      ];
+
+      datos.push({
+        fecha: clave,
+        ingreso: ingresoFinal,
+        gasto,
+        transacciones: transaccionesTotales
+      });
     }
-  
+
     setDatosGrafico(datos);
-  }, [transacciones, modoGrafico, salario, mesSeleccionado, anioSeleccionado]);     
+  }, [transacciones, modoGrafico, salario, mesSeleccionado, anioSeleccionado, gastosMensuales]);
 
 
   useEffect(() => {
@@ -229,9 +220,12 @@ export default function DashboardFinanciero() {
     let saldo = 0;
 
     datosGrafico.forEach((d) => {
-      const [dia, mes] = d.fecha.split("-").map(x => parseInt(x));
-      const gastosFijosHoy = gastosMensuales.filter(gasto => parseInt(gasto.dia_pago) === dia);
-      saldo += (d.ingreso - d.gasto);  // solo considera las transacciones
+      const [dia, mes] = d.fecha.split("-").map(Number);
+      const gastosFijosHoy = gastosMensuales
+        .filter(g => Number(g.dia_pago) === dia)
+        .reduce((acc, g) => acc + Number(g.monto), 0);
+
+      saldo += (Number(d.ingreso) - Number(d.gasto) - gastosFijosHoy);
       nuevoSaldoAcumulado.push(saldo);
     });
 
@@ -304,7 +298,7 @@ export default function DashboardFinanciero() {
       .catch(err => console.error("Error al cargar metas:", err));
   }, []);  
 
-  
+
   const options = {
     responsive: true,
     plugins: {
@@ -317,6 +311,7 @@ export default function DashboardFinanciero() {
   const totalAhorros = movimientosAhorro.reduce((acc, mov) => {
     return acc + (mov.tipo === "agregar" ? mov.monto : -mov.monto);
   }, 0);
+
 
   useEffect(() => {
     setAhorros(totalAhorros);
@@ -348,10 +343,16 @@ export default function DashboardFinanciero() {
   
 
   const transaccionesPorFecha = {};
-  transacciones.forEach((t) => {
-    const fecha = new Date(t.fecha).toLocaleDateString("es-CL");
-    if (!transaccionesPorFecha[fecha]) transaccionesPorFecha[fecha] = [];
-    transaccionesPorFecha[fecha].push(t);
+  transacciones.forEach((t) => {  
+    const fecha = new Date(t.fecha);
+    const fechaCL = fecha.toLocaleDateString("es-CL", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+
+    if (!transaccionesPorFecha[fechaCL]) transaccionesPorFecha[fechaCL] = [];
+    transaccionesPorFecha[fechaCL].push(t);
   });
 
 
@@ -656,7 +657,7 @@ export default function DashboardFinanciero() {
               alignItems: "center",
               width: "30%",
             }}>
-              <span>👋 Bienvenida, <strong>{nombreUsuario}</strong></span>
+              <span>Bienvenido, <strong>{nombreUsuario}</strong></span>
               <button className="btn-azul" onClick={() => setMostrarModalNombre(true)}>Cambiar nombre de usuario</button>
             </div>
 
@@ -881,9 +882,19 @@ export default function DashboardFinanciero() {
         )}
 
         {pestanaActiva === "metas" && metas.length > 0 && (
-          <div className="dashboard-metas">
+          <div className="dashboard-metas analisis-mensual-wrapper">
             <h2 className="titulo">Mi Meta de Ahorro</h2>
+            {metas.length === 0 && (
+              <p style={{ textAlign: "center", marginBottom: "1rem" }}>
+                Aún no has creado una meta de ahorro.
+              </p>
+            )}
             <div className="meta-progreso-box">
+              <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
+                <button className="btn-azul" onClick={() => navigate("/metas-ahorro")}>
+                  Ir a mis metas
+                </button>
+              </div>
               <h3>{metas[0].titulo}</h3>
               <p>
                 Meta: ${metas[0].monto_meta.toLocaleString("es-CL")} <br />
@@ -927,7 +938,7 @@ export default function DashboardFinanciero() {
               {/* Gráfico: Saldo acumulado */}
               <div className="grafico-contenedor">
                 <h3 className="subtitulo">Saldo acumulado</h3>
-                <div className="grafico-box">
+                <div className="grafico-box" style={{ height: "400px" }}>
                   <Line
                     data={{
                       labels: datosGrafico.map((d) => d.fecha),
@@ -957,24 +968,29 @@ export default function DashboardFinanciero() {
                           callbacks: {
                             label: (context) => {
                               const index = context.dataIndex;
-                              const fechaLabel = context.label;
-                              const fechaParts = fechaLabel.split("-");
-                              const fechaJS = new Date(`${anioSeleccionado}-${fechaParts[1]}-${fechaParts[0]}`);
-                              const fechaCL = fechaJS.toLocaleDateString("es-CL");
-
+                              const fechaLabel = context.label; // "DD-MM"
+                              const punto = datosGrafico.find(d => d.fecha === fechaLabel);
+                              const detalles = punto?.transacciones || [];
                               const saldo = context.dataset.data[index];
-                              const detalles = transaccionesPorFecha[fechaCL] || [];
 
                               const resultado = [`Saldo: $${Number(saldo).toLocaleString("es-CL")}`];
 
-                              if (detalles.length > 0) {
+                              if (detalles.length === 0) {
+                                resultado.push("Sin movimientos ese día.");
+                              } else {
                                 detalles.forEach(t => {
                                   const monto = `$${Number(t.monto).toLocaleString("es-CL")}`;
-                                  if (t.tipo === "ingreso") {
-                                    resultado.push(`🟢 ${t.descripcion} +${monto}`);
-                                  } else {
-                                    resultado.push(`🔴 ${t.descripcion} -${monto}`);
-                                  }
+                                  const emoji = t.tipo === "ingreso" ? "🟢" : "🔴";
+                                  const signo = t.tipo === "ingreso" ? "+" : "-";
+
+                                  const tipo =
+                                    t.esMensual
+                                      ? " (mensual)"
+                                      : t.esProgramado
+                                        ? " (programado)"
+                                        : "";
+
+                                  resultado.push(`${emoji} ${t.descripcion}${tipo} ${signo}${monto}`);
                                 });
                               }
 
@@ -994,7 +1010,7 @@ export default function DashboardFinanciero() {
               {/* Gráfico: Evolución de Ahorros */}
               <div className="grafico-contenedor">
                 <h3 className="subtitulo">Evolución de Ahorros</h3>
-                <div className="grafico-box">
+                <div className="grafico-box" style={{ height: "300px" }}>
                   <Line
                     data={{
                       labels: datosGrafico.map((d) => d.fecha),

@@ -3,10 +3,15 @@ import Header from "../../components/header/header";
 import Footer from "../../components/footer/footer";
 import React, { useState, useEffect } from "react";
 
-// 9-4-2024 - Se agrega la función Categorias para manejar la vista de categorías
 const Categorias = () => {
 
   const idUsuario = localStorage.getItem("id_usuario");
+  const [mostrarModalAgregar, setMostrarModalAgregar] = useState(false);
+  const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: "", tipo: "", monto_limite: 0 });
+  const [categoriaEditando, setCategoriaEditando] = useState(null);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [categoriaAEliminar, setCategoriaAEliminar] = useState(null);
+
 
   if (!idUsuario) {
     alert("No se encontró el ID del usuario. Por favor, inicia sesión.");
@@ -28,13 +33,7 @@ const Categorias = () => {
       .catch(err => console.error("Error al cargar categorías:", err));
 }, []);
 
-  const [mostrarModalAgregar, setMostrarModalAgregar] = useState(false);
-  const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: "", tipo: "", monto_limite: 0 });
-  const [categoriaEditando, setCategoriaEditando] = useState(null);
-  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
-  const [categoriaAEliminar, setCategoriaAEliminar] = useState(null);
 
-  // 9-4-2024 - Se agrega la función handleEliminar para manejar la eliminación de categorías
   const handleEliminar = (index) => {
     setCategoriaAEliminar(index);
     setMostrarConfirmacion(true);
@@ -56,10 +55,12 @@ const Categorias = () => {
     setCategoriaAEliminar(null);
   };  
   
+
   const cancelarEliminar = () => {
     setMostrarConfirmacion(false);
     setCategoriaAEliminar(null);
   };  
+
 
   const handleEditar = (index) => {
     const categoria = categorias[index];
@@ -72,6 +73,7 @@ const Categorias = () => {
     setMostrarModalAgregar(true);
   };  
 
+  
   const handleAceptar = async () => {
     if (!nuevaCategoria.nombre.trim() || !nuevaCategoria.tipo.trim()) {
       alert("Todos los campos son obligatorios.");
