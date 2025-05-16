@@ -345,3 +345,30 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   margin-top: 1rem;
 }
+
+.modal-box label,
+.modal-box input[type="date"] {
+  margin: 0 !important;
+  padding: 0.4rem 0.75rem !important;
+  box-sizing: border-box;
+}
+
+.modal-box input[type="date"],
+.modal-box input[type="text"],
+.modal-box input[type="number"] {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background-color: white;
+  box-sizing: border-box;
+}
+
+.modal-box input[type="date"] {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+

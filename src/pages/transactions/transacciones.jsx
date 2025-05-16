@@ -17,9 +17,8 @@ export default function Transacciones() {
   const [nuevaTransaccion, setNuevaTransaccion] = useState({
     fecha: "",
     monto: "",
-    categoria: "",
+    id_categoria: "",
     descripcion: "",
-    mesPago: "",
     imagen: null,
     tipoPago: "efectivo",
     tipoPago2: "",
@@ -49,57 +48,120 @@ export default function Transacciones() {
   const [modalPagoAbierto, setModalPagoAbierto] = useState(false);
   const [pagoSeleccionado, setPagoSeleccionado] = useState(null);
   const [montoPagado, setMontoPagado] = useState("");
-  const [gastosMensuales, setGastosMensuales] = useState([]);
   const [showSelectorTipo, setShowSelectorTipo] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState(null);
   const [usarSegundoMetodo, setUsarSegundoMetodo] = useState(false);
   const [showModalEditar, setShowModalEditar] = useState(false);
   const [usarSegundoMetodoEditar, setUsarSegundoMetodoEditar] = useState(false);
+  const [archivoExcel, setArchivoExcel] = useState(null);
+  const [mensajeImportacion, setMensajeImportacion] = useState("");
+  const [previaOCR, setPreviaOCR] = useState(null);
+  const [imagenVistaPrevia, setImagenVistaPrevia] = useState(null);
+  const [mostrarModalImagen, setMostrarModalImagen] = useState(false);
+
+  const metodosIngreso = [
+    { valor: "efectivo", label: "Efectivo" },
+    { valor: "transferencia", label: "Transferencia" },
+    { valor: "deposito", label: "Depósito bancario" },
+    { valor: "automatico", label: "Pago automático" },
+    { valor: "cheque", label: "Cheque" },
+    { valor: "otro", label: "Otro" }
+  ];
+
+  const metodosGasto = [
+    { valor: "efectivo", label: "Efectivo" },
+    { valor: "debito", label: "Débito" },
+    { valor: "credito", label: "Crédito" },
+    { valor: "transferencia", label: "Transferencia" },
+    { valor: "automatico", label: "Pago automático" },
+    { valor: "cheque", label: "Cheque" },
+    { valor: "otro", label: "Otro" }
+  ];
+
+  const metodosMostrar = tipo === "ingreso" ? metodosIngreso : metodosGasto;
+
+
+  const handleArchivoChange = (e) => {
+    const file = e.target.files[0];
+    if (file && (file.name.endsWith(".xlsx") || file.name.endsWith(".csv"))) {
+      setArchivoExcel(file);
+      setMensajeImportacion("");
+    } else {
+      setArchivoExcel(null);
+      setMensajeImportacion("Solo se permiten archivos .xlsx o .csv");
+    }
+  };
+
+  const handleSubirArchivo = async () => {
+    if (!archivoExcel) {
+      setMensajeImportacion("Debes seleccionar un archivo válido");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("archivo", archivoExcel);
+    formData.append("id_usuario", 17); // o el ID real que estés usando
+
+    try {
+      const respuesta = await fetch("http://localhost:5000/api/importar_movimientos", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await respuesta.json();
+      if (respuesta.ok) {
+        setMensajeImportacion(`✅ ${data.mensaje}`);
+        cargarTodasTransacciones();
+      }
+      else {
+        setMensajeImportacion(`❌ Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error(error);
+      setMensajeImportacion("❌ Error al conectar con el servidor");
+    }
+  };
 
 
   const cargarTodasTransacciones = async () => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
 
-    const [normales, programadosRaw] = await Promise.all([
-      fetch(`http://localhost:5000/api/transacciones/${id_usuario}/todas`).then(res => res.json()),
-      fetch(`http://localhost:5000/api/pagos_programados/${id_usuario}`).then(res => res.json())
-    ]);
+    try {
+      const respuesta = await fetch(`http://localhost:5000/api/transacciones_completas?id_usuario=${id_usuario}&mes=${mesFiltrado}&anio=${anioFiltrado}`);
+      const normales = await respuesta.json();
 
-    const programados = programadosRaw.map((g) => ({
-      id_transaccion: `gp-${g.id_gasto_programado}`,
-      fecha: g.fecha_emision,
-      monto: g.monto,
-      categoria: "Gasto programado",
-      descripcion: g.descripcion,
-      tipo: "gasto",
-      tipoPago: g.tipo_pago,
-      visible: true,
-      imagen: null,
-      esProgramado: true
-    }));
+      console.log("📦 Transacciones normales recibidas:", normales);
 
-    const combinadas = [...normales, ...programados].filter(t => t.visible);
-    combinadas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      // Mostrar cada transacción con su ID y categoría
+      normales.forEach((t, index) => {
+        console.log(`🔍 Transacción ${index + 1}:`, {
+          descripcion: t.descripcion,
+          categoriaTexto: t.categoria,
+          id_categoria: t.id_categoria
+        });
+      });
 
-    setTransacciones(combinadas);
-    setEliminadas(normales.filter(t => t.visible === 0 || t.visible === false));
-  };
+      const eliminadasDebug = normales.filter(t => !t.visible);
+      console.log("🗑️ Eliminadas recibidas:", eliminadasDebug);
 
+      const visibles = normales.filter(t => t.visible);
+      visibles.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-  useEffect(() => {
-    if (!nuevaTransaccion.mesPago) {
-      setNuevaTransaccion((prev) => ({ ...prev, mesPago: getMesActual() }));
+      setTransacciones(visibles);
+      setEliminadas(eliminadasDebug);
+    } catch (error) {
+      console.error("❌ Error al cargar transacciones:", error);
     }
-  }, [tipo]);
+  };
   
 
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
   
-    fetch(`http://localhost:5000/api/transacciones/categorias/${id_usuario}`)
+    fetch(`http://localhost:5000/api/categorias/${id_usuario}`)
       .then(res => res.json())
       .then(data => {
         console.log("🧾 Categorías cargadas:", data);
@@ -112,7 +174,25 @@ export default function Transacciones() {
 
 
   useEffect(() => {
-    cargarTodasTransacciones();
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+
+    const generarTransaccionesRecurrentes = async () => {
+      try {
+        await fetch(`http://localhost:5000/api/transacciones/generar_mes_actual?id_usuario=${id_usuario}`, {
+          method: "POST"
+        });
+      } catch (error) {
+        console.warn("⚠️ No se pudo generar transacciones recurrentes:", error);
+      }
+    };
+
+    const cargarTodo = async () => {
+      await generarTransaccionesRecurrentes();
+      await cargarTodasTransacciones();
+    };
+
+    cargarTodo();
   }, [mesFiltrado, anioFiltrado]);
 
 
@@ -146,62 +226,32 @@ export default function Transacciones() {
     nuevaTransaccion.interes,
     nuevaTransaccion.tipoPago
   ]);
-  
-
-  useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
-    if (!id_usuario) return;
-
-    fetch(`http://localhost:5000/api/gastos_mensuales?id_usuario=${id_usuario}`)
-      .then(res => res.json())
-      .then(data => {
-        const hoy = new Date();
-        const mesF = parseInt(mesFiltrado);
-        const anioF = parseInt(anioFiltrado);
-
-        const gastosFiltrados = data
-          .filter(gasto => {
-            if (!gasto.fecha_creacion || !gasto.dia_pago) return false;
-
-            const [anioCreado, mesCreado] = gasto.fecha_creacion.split("-").map(Number);
-            const correspondePorFecha = (
-              anioF > anioCreado ||
-              (anioF === anioCreado && mesF >= mesCreado)
-            );
-
-            const fechaCobro = new Date(anioF, mesF - 1, gasto.dia_pago);
-            const yaFueCobrado = fechaCobro <= hoy;
-
-            return correspondePorFecha && yaFueCobrado;
-          })
-          .map(gasto => {
-            const fechaCobro = `${anioF}-${String(mesF).padStart(2, "0")}-${String(gasto.dia_pago).padStart(2, "0")}`;
-            return {
-              id_transaccion: `gm-${gasto.id_gasto}`,
-              fecha: fechaCobro,
-              monto: gasto.monto,
-              categoria: "Gasto mensual",
-              descripcion: `${gasto.nombre}${gasto.descripcion ? " – " + gasto.descripcion : ""}`,
-              tipo: "gasto",
-              tipoPago: "automático",
-              visible: true,
-              imagen: null,
-              esMensual: true
-            };
-          });
-
-        setGastosMensuales(gastosFiltrados);
-      })
-      .catch(error => {
-        console.error("Error al cargar gastos mensuales:", error);
-      });
-  }, [mesFiltrado, anioFiltrado]);  
 
 
   const scrollToForm = () => {
     if (formularioRef.current) {
       formularioRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+  };
+
+
+  const limpiarFormulario = () => {
+    setNuevaTransaccion({
+      fecha: "",
+      monto: "",
+      id_categoria: "",
+      descripcion: "",
+      imagen: null,
+      tipoPago: "efectivo",
+      tipoPago2: "",
+      monto2: "",
+      cuotas: "1",
+      interes: "0",
+      totalCredito: "",
+      valorCuota: ""
+    });
+    setUsarSegundoMetodo(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
 
@@ -253,7 +303,8 @@ export default function Transacciones() {
     else if (type === "file") {
       newValue = files[0];
       setTransaccionEditada((prev) => ({ ...prev, imagen: newValue }));
-    }    
+      setNuevaTransaccion((prev) => ({ ...prev, imagen: newValue }));
+    }
     else if (name === "monto") newValue = formatearConPuntos(value);
     else newValue = value;
   
@@ -263,15 +314,89 @@ export default function Transacciones() {
     }));
   };  
 
-  const todas = [...transacciones, ...gastosMensuales];
+
+  const leerBoleta = async () => {
+    if (!nuevaTransaccion.imagen) {
+      alert("Debes seleccionar primero una imagen de boleta en el campo 'Comprobante'.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("imagen", nuevaTransaccion.imagen);
+
+    try {
+      const respuesta = await fetch("http://localhost:5000/api/leer_boleta", {
+        method: "POST",
+        body: formData
+      });
+      const data = await respuesta.json();
+      if (!respuesta.ok) {
+        alert("❌ Error al leer la boleta: " + data.error);
+        return;
+      }
+
+      const texto = data.texto.split("\n").map(l => l.trim()).filter(l => l);
+      console.log("📄 Texto extraído:", texto);
+
+      // 1) Intentar extraer fecha en líneas que mencionen Fecha o Emisión
+      const regexFechaLine = /(fecha(?:\s+de)?\s*emisi[oó]n?|fecha)\s*[:\-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/i;
+      let fechaRaw = "";
+      for (let line of texto) {
+        const m = line.match(regexFechaLine);
+        if (m) { fechaRaw = m[2]; break; }
+      }
+      // 2) Si no hay, buscar la primera fecha genérica
+      if (!fechaRaw) {
+        const regexFechaAny = /(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/;
+        const m = texto.join(" ").match(regexFechaAny);
+        fechaRaw = m?.[1] || "";
+      }
+      const fechaFormateada = formatearFechaOCR(fechaRaw);
+
+      // 3) Extraer todos los montos válidos y escoger el más alto
+      const regexMontos = /(?:\$|\s)\s*([\d]{1,3}(?:[\.,]\d{3})*(?:,\d{2})?)/g;
+      const montos = [];
+      let match;
+      for (let line of texto) {
+        while ((match = regexMontos.exec(line)) !== null) {
+          const num = parseFloat(match[1].replace(/\./g, "").replace(",", "."));
+          if (!isNaN(num)) montos.push(num);
+        }
+      }
+      const montoMasAlto = montos.length ? Math.max(...montos) : "";
+
+      // 4) Actualizar estado
+      setNuevaTransaccion(prev => ({
+        ...prev,
+        fecha: prev.fecha || fechaFormateada,
+        monto: prev.monto || (montoMasAlto.toString())
+      }));
+
+      alert(`✅ Boleta leída correctamente:\n\n🗓️ Fecha: ${fechaFormateada || "no detectada"}\n💲Monto total: ${montoMasAlto || "no detectado"}`);
+
+    } catch (error) {
+      console.error("❌ Error al conectar con el servidor OCR:", error);
+      alert("Error al conectar con el servidor.");
+    }
+  };
+
+  const formatearFechaOCR = (fechaTexto) => {
+    if (!fechaTexto) return "";
+    const [d, m, a] = fechaTexto.replace(/[\/\-.]/g, "-").split("-");
+    const año = a.length === 2 ? `20${a}` : a;
+    return `${año}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  };
+
+
+  const todas = [...transacciones];
 
   const transaccionesFiltradas = todas.filter((t) => {
-    const fuente = t.mesPago || t.fecha;
+    const fuente = t.fecha;
     if (!fuente || !fuente.includes("-")) return false;
     const [anio, mes] = fuente.split("-");
     const coincideMes = !mesFiltrado || mes === mesFiltrado.padStart(2, "0");
     const coincideAnio = !anioFiltrado || anio === anioFiltrado;
-    return t.visible == 1 && coincideMes && coincideAnio;
+    return coincideMes && coincideAnio;
   });
   
   // Ordenar fuera del .filter
@@ -304,13 +429,13 @@ export default function Transacciones() {
   const editarTransaccion = (id) => {
     const trans = transacciones.find((t) => t.id_transaccion === id);
     if (!trans) return;
-  
+
     setNuevaTransaccion({
       id_transaccion: trans.id_transaccion,
       fecha: trans.fecha,
       monto: trans.monto,
       descripcion: trans.descripcion || "",
-      categoria: trans.categoria || "",
+      id_categoria: trans.id_categoria || "",
       tipoPago: trans.tipoPago || "",
       tipo: trans.tipo || "gasto",
       imagen: trans.imagen || "",
@@ -318,21 +443,78 @@ export default function Transacciones() {
       valorCuota: trans.valorCuota || "",
       totalCredito: trans.totalCredito || "",
       interes: trans.interes || "",
-      mesPago: trans.mesPago || "",
+      tipoPago2: trans.tipoPago2 || "",
+      monto2: trans.monto2 || "",
+      id_gasto_mensual: trans.id_gasto_mensual || null,
+      id_gasto_programado: trans.id_gasto_programado || null,
     });
 
     setUsarSegundoMetodoEditar(!!trans.tipoPago2);
     setTipo(trans.tipo);
     setEditIndex(id);
-    setShowModalEditar(true); // abre el modal
-  };  
+    setShowModalEditar(true);
+  };
   
   
-  const actualizarTransaccion = () => {
-    const nuevas = [...transacciones];
-    nuevas[editIndex] = transaccionEditada;
-    setTransacciones(nuevas);
-    setShowModal(null);
+  const actualizarTransaccion = async () => {
+    const id_usuario = parseInt(localStorage.getItem("id_usuario"));
+    if (!id_usuario) return;
+
+    try {
+      const montoNumerico = typeof nuevaTransaccion.monto === "string"
+        ? parseFloat(nuevaTransaccion.monto.replace(/\./g, "").replace(",", "."))
+        : parseFloat(nuevaTransaccion.monto);
+
+      const transaccionAEnviar = {
+        id_usuario,
+        tipo: nuevaTransaccion.tipo || tipo,
+        fecha: nuevaTransaccion.fecha,
+        monto: montoNumerico,
+        id_categoria: nuevaTransaccion.id_categoria,
+        descripcion: nuevaTransaccion.descripcion,
+        tipoPago: nuevaTransaccion.tipoPago,
+        tipoPago2: usarSegundoMetodoEditar ? nuevaTransaccion.tipoPago2 : null,
+        monto2: usarSegundoMetodoEditar
+          ? parseFloat((nuevaTransaccion.monto2 || "0").toString().replace(/\./g, "").replace(",", "."))
+          : null,
+        cuotas: parseInt(nuevaTransaccion.cuotas || 1),
+        interes: parseFloat(nuevaTransaccion.interes || 0),
+        valorCuota: parseFloat(nuevaTransaccion.valorCuota || 0),
+        totalCredito: parseFloat(nuevaTransaccion.totalCredito || 0),
+        imagen: null,
+        nombre_archivo: nuevaTransaccion.imagen?.name || null,
+        id_gasto_mensual: nuevaTransaccion.id_gasto_mensual || null,
+        id_gasto_programado: nuevaTransaccion.id_gasto_programado || null
+      };
+
+      await fetch(`http://localhost:5000/api/transacciones/${editIndex}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(transaccionAEnviar)
+      });
+
+      await cargarTodasTransacciones(); // recarga después de actualizar
+
+      // Reset
+      setEditIndex(null);
+      setShowModalEditar(false);
+      setNuevaTransaccion({
+        fecha: "",
+        monto: "",
+        categoria: "",
+        descripcion: "",
+        imagen: null,
+        tipoPago: "efectivo",
+        cuotas: "1",
+        interes: "0",
+        totalCredito: "",
+        valorCuota: ""
+      });
+
+    } catch (error) {
+      console.error("❌ Error al actualizar transacción:", error);
+      alert("No se pudo actualizar la transacción.");
+    }
   };
   
 
@@ -363,7 +545,7 @@ export default function Transacciones() {
       return;
     }
 
-    const categoriaSeleccionada = categorias.find(cat => cat.nombre === origen.categoria);
+    const categoriaSeleccionada = categorias.find(cat => Number(cat.id_categoria) === Number(origen.id_categoria));
     if (categoriaSeleccionada && categoriaSeleccionada.monto_limite && categoriaSeleccionada.monto_limite !== 0) {
       const montoNuevo = parseFloat((origen.monto || "0").toString().replace(/\./g, "").replace(",", "."));
       const transaccionesMismoMesYCategoria = transacciones.filter(t => {
@@ -416,7 +598,7 @@ export default function Transacciones() {
       tipo,
       fecha: origen.fecha,
       monto: montoNumerico,
-      categoria: origen.categoria,
+      id_categoria: origen.id_categoria,
       descripcion: origen.descripcion,
       tipoPago: origen.tipoPago,
       tipoPago2: usarSegundoMetodo || usarSegundoMetodoEditar ? origen.tipoPago2 : null,
@@ -455,7 +637,7 @@ export default function Transacciones() {
           body: JSON.stringify(transaccionAEnviar)
         });
 
-        await cargarTodasTransacciones(); // ✅ vuelve a cargar normales + programados
+        await cargarTodasTransacciones(); // vuelve a cargar normales + programados
       }
 
       // 🧹 Limpiar y cerrar modal
@@ -465,7 +647,6 @@ export default function Transacciones() {
         monto: "",
         categoria: "",
         descripcion: "",
-        mesPago: getMesActual(),
         imagen: null,
         tipoPago: "efectivo",
         cuotas: "1",
@@ -498,27 +679,40 @@ export default function Transacciones() {
 
 
   const eliminarTransaccion = async (id) => {
-    const confirmado = window.confirm("¿Deseas eliminar esta transacción?");
+    const confirmado = window.confirm("¿Estás segura(o) de que quieres eliminar esta transacción? Esto también eliminará la transacción asociada de este mes.");
+
     if (!confirmado) return;
 
     try {
-      await fetch(`http://localhost:5000/api/transacciones/${id}/eliminar`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" }
-      });
+      if (typeof id === "string" && id.startsWith("gp-")) {
+        const idReal = id.split("-")[1];
+        await fetch(`http://localhost:5000/api/transacciones/programados/${idReal}/eliminar`, {
+          method: "PUT"
+        });
 
-      // ✅ Re-carga todo el contenido después de eliminar
-      await cargarTodasTransacciones();
+      } else if (typeof id === "string" && id.startsWith("gm-")) {
+        const idReal = id.split("-")[1];
+        await fetch(`http://localhost:5000/api/transacciones/mensuales/${idReal}/eliminar`, {
+          method: "PUT"
+        });
+
+      } else {
+        await fetch(`http://localhost:5000/api/transacciones/${id}/eliminar`, {
+          method: "PUT"
+        });
+      }
+
+      await cargarTodasTransacciones(); // Recarga la vista
     } catch (error) {
       console.error("Error al eliminar transacción:", error);
       alert("❌ No se pudo eliminar la transacción.");
     }
-  };     
+  };
   
 
   const exportarTransacciones = (mesExportar, anioExportar, formato) => {
     const filtradas = transacciones.filter((t) => {
-      const fuente = t.mesPago || t.fecha; // usar fecha si mesPago no existe
+      const fuente = t.fecha;
       if (!fuente || !fuente.includes("-")) return false;
     
       const [anio, mes] = fuente.split("-");
@@ -603,15 +797,6 @@ export default function Transacciones() {
       doc.save(`Transacciones_${nombreMes}_${anioExportar}.pdf`);
     }
   };     
-
-  const exportarMesActual = (formato) => {
-    const hoy = new Date();
-    const mesActual = String(hoy.getMonth() + 1);
-    const anioActual = String(hoy.getFullYear());
-  
-    setFormatoExportar(formato);
-    exportarTransacciones(mesActual, anioActual, formato);
-  };
   
   
   const recuperarTransaccion = async (id) => {
@@ -646,22 +831,61 @@ export default function Transacciones() {
     }
   };
 
+  const cargarTransacciones = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/transacciones?id_usuario=17`);
+      const data = await response.json();
+      setTransacciones(data);  // o como sea que guardes el listado
+    } catch (error) {
+      console.error("Error al cargar transacciones:", error);
+    }
+  };
+
+
+  const exportarMesActual = async (formato) => {
+    const id_usuario = localStorage.getItem("id_usuario");
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/transacciones/exportar_mes_actual?id_usuario=${id_usuario}&mes=${mesFiltrado}&anio=${anioFiltrado}&formato=${formato}`)
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Error al exportar:", errorText);
+        alert("❌ Error al exportar. Verifica si hay transacciones para este mes o si el backend respondió correctamente.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `transacciones_${mesFiltrado}-${anioFiltrado}.${formato === "excel" ? "xlsx" : "pdf"}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+    } catch (error) {
+      console.error("❌ Error inesperado al exportar:", error);
+      alert("❌ Error al exportar transacciones. Revisa la consola para más detalles.");
+    }
+  };
+
 
   const eliminadasFiltradas = eliminadas.filter((t) => {
-    const fuente = t.mesPago || t.fecha;
-    if (!fuente || !fuente.includes("-")) return false;
-  
-    const partes = fuente.split("-");
-    const anio = partes[0];
-    const mes = partes[1];
-  
+    const fecha = new Date(t.fecha);
+    if (isNaN(fecha.getTime())) return false;
+
+    const anio = fecha.getFullYear().toString();
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, "0");
+
     const coincideMes = !mesFiltrado || mes === mesFiltrado.padStart(2, "0");
     const coincideAnio = !anioFiltrado || anio === anioFiltrado;
-  
+
     return coincideMes && coincideAnio;
-  });   
+  });
 
   console.log("🧪 eliminadasFiltradas:", eliminadasFiltradas);
+
 
   return (
     <div className="page-layout">
@@ -669,40 +893,49 @@ export default function Transacciones() {
       <main className="transacciones-container">
         <h1 className="titulo-transacciones">Gestión de Transacciones</h1>
 
-        <div className="botones-agregar-contenedor">
+        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "2rem" }}>
 
-          <div className="menu-exportar-wrapper">
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-              <div className="menu-exportar-wrapper">
-                <button className="btn-exportar-trigger" onClick={() => setMostrarMenuFormato(!mostrarMenuFormato)}>
-                  Exportar mes actual
-                </button>
+          {/* BLOQUE IZQUIERDA */}
+          <div style={{ flex: "2", minWidth: "300px" }}>
+            <div className="menu-exportar-wrapper" style={{ marginBottom: "1.5rem" }}>
+              <button className="btn-exportar-trigger" onClick={() => setMostrarMenuFormato(!mostrarMenuFormato)}>
+                Exportar mes actual
+              </button>
+              {mostrarMenuFormato && (
+                <div className="menu-exportar">
+                  <label>Elegir formato:</label>
+                  <button className="btn-exportar-confirmar" onClick={() => { exportarMesActual("excel"); setMostrarMenuFormato(false); }}>
+                    Excel (.xlsx)
+                  </button>
+                  <button className="btn-exportar-confirmar" onClick={() => { exportarMesActual("pdf"); setMostrarMenuFormato(false); }}>
+                    PDF
+                  </button>
+                </div>
+              )}
+            </div>
 
-                {mostrarMenuFormato && (
-                  <div className="menu-exportar">
-                    <label>Elegir formato:</label>
-                    <button
-                      className="btn-exportar-confirmar"
-                      onClick={() => {
-                        exportarMesActual("excel");
-                        setMostrarMenuFormato(false);
-                      }}
-                    >
-                      Excel (.xlsx)
-                    </button>
-
-                    <button
-                      className="btn-exportar-confirmar"
-                      onClick={() => {
-                        exportarMesActual("pdf");
-                        setMostrarMenuFormato(false);
-                      }}
-                    >
-                      PDF
-                    </button>
-                  </div>
-                )}
-              </div>
+            <div className="importar-excel">
+              <h4>Importar movimientos bancarios</h4>
+              <input
+                id="input-archivo"
+                type="file"
+                accept=".xlsx,.csv"
+                onChange={handleArchivoChange}
+                style={{ display: "none" }}
+                ref={fileInputRef}
+              />
+              <label htmlFor="input-archivo" className="btn-seleccion-archivo">
+                📁 Seleccionar archivo de movimientos bancarios
+              </label>
+              {archivoExcel && (
+                <p style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "#374151" }}>
+                  Archivo seleccionado: <strong>{archivoExcel.name}</strong>
+                </p>
+              )}
+              <button onClick={handleSubirArchivo} className="btn-guardar" style={{ marginTop: "0.5rem" }}>
+                Subir archivo
+              </button>
+              {mensajeImportacion && <p>{mensajeImportacion}</p>}
             </div>
           </div>
         </div>
@@ -735,198 +968,99 @@ export default function Transacciones() {
             />
           </div>
         </div>
-        
-        <div className="limites-categorias">
-          <h3>Control de límites por categoría (mes actual)</h3>
-          <table className="tabla-limites">
-            <thead>
-              <tr>
-                <th>Categoría</th>
-                <th>Gasto actual</th>
-                <th>Monto límite</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categorias.map((cat, idx) => {
-                const transaccionesCategoria = transaccionesFiltradas.filter(t =>
-                  t.tipo === "gasto" &&
-                  t.visible !== false &&
-                  t.tipoPago !== "credito" &&
-                  t.categoria === cat.nombre
-                );                              
-
-                const gastoActual = transaccionesCategoria.reduce((acc, t) => acc + parseFloat(t.monto.toString().replace(/\./g, "").replace(",", ".")), 0);
-                
-                return (
-                  <tr key={idx}>
-                    <td>{cat.nombre}</td>
-                    <td>${gastoActual.toLocaleString("es-CL")}</td>
-                    <td>{cat.monto_limite && cat.monto_limite !== 0 ? `$${cat.monto_limite.toLocaleString("es-CL")}` : "Sin límite"}</td>
-                    <td>
-                      {cat.monto_limite && cat.monto_limite !== 0
-                        ? (gastoActual > cat.monto_limite ? "🚨 Sobrepasado" : "✅ Dentro del límite")
-                        : "♾️"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       
+      <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: "1rem" }}>
+        <button
+          className="btn-guardar"
+          onClick={() => {
+            setTipo("gasto");
+            setMostrarFormulario(true);
+          }}
+        >
+          Agregar nueva transacción
+        </button>
+      </div>
+
       <h3 className="titulo-secundario">Transacciones registradas</h3>
 
         <div className="lista-transacciones">
-        {(() => {
-          const filas = [];
-          for (let i = 0; i < transaccionesFiltradas.length; i += 2) {
-            const fila = transaccionesFiltradas.slice(i, i + 2);
+          {(() => {
+            const filas = [];
+            const transaccionesOrdenadas = [...transaccionesFiltradas].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-            fila.forEach((t, index) => {
-              filas.push(
-                <div className={`tarjeta-minimal ${t.esMensual ? "gasto-mensual" : ""} ${t.esProgramado ? "esProgramado" : ""} ${t.tipoPago === "credito" ? "transaccion-credito" : ""}`} key={i + index}>
-                  <div className="fila-superior">
-                    <div className={`tag ${
-                      t.categoria === "Gasto mensual"
-                        ? "gasto-mensual"
-                        : t.categoria === "Gasto programado"
-                        ? "gasto-programado"
-                        : t.tipo
-                    }`}>
-                      {t.categoria === "Gasto mensual"
-                        ? "GASTO MENSUAL"
-                        : t.categoria === "Gasto programado"
-                        ? "GASTO PROGRAMADO"
-                        : t.tipo.toUpperCase()}
-                    </div>
-                    <div className="fecha">{formatearFechaBonita(t.fecha)}</div>
-                  </div>
+            for (let i = 0; i < transaccionesOrdenadas.length; i += 2) {
+              const fila = transaccionesOrdenadas.slice(i, i + 2);
 
-                  <div className="contenido-horizontal">
-                    <div className="item"><span>Monto:</span><div className="monto">${Number(t.monto).toLocaleString("es-CL")}</div></div>
-                    <div className="item"><span>Categoría:</span><div>{t.categoria}</div></div>
-                    <div className="item"><span>Descripción:</span><div>{t.descripcion}</div></div>
-                    <div className="item"><span>Tipo de pago:</span><div>{t.tipoPago}</div></div>
-                  </div>
-
-                  {t.imagen && (
-                    <button className="btn-ver-comprobante" onClick={() => {
-                      const url = t.imagen.startsWith("http") ? t.imagen : `http://localhost:5000/imagenes/${t.imagen}`;
-                      setImagenModal(url);
-                      setShowModalImagen(true);
-                    }}>
-                      Ver comprobante
-                    </button>
-                  )}
-
-                  {!t.protegida && (
-                    <div className="menu-transaccion">
-                      <button className="boton-menu" onClick={() => toggleMenu(t.id_transaccion)}>⋯</button>
-                      {menuAbierto === t.id_transaccion && (
-                        <div className="menu-opciones">
-                          <button onClick={() => editarTransaccion(t.id_transaccion)}>Editar</button>
-                          <button onClick={() => eliminarTransaccion(t.id || t.id_transaccion)}>Eliminar</button>
-                        </div>
-                    )}
-                  </div>                  
-                  )}
-                </div>
-              );
-            });
-
-            // ⬇️ Si hay solo una tarjeta en esta fila, el "+" va a la derecha
-            if (fila.length === 1 && i + 1 >= transaccionesFiltradas.length) {
-              filas.push(
-                <div key="mas-derecha" className="col-der">
-                  {showSelectorTipo ? (
-                    <div className="selector-tipo-popup">
-                      <p>¿Qué deseas agregar?</p>
-                      <div className="botones-selector">
-                        <button
-                          className="btn-ingresogasto"
-                          onClick={() => {
-                            setTipo("ingreso");
-                            setShowSelectorTipo(false);
-                            setMostrarFormulario(true);
-                            scrollToForm();
-                          }}
-                        >
-                          Ingreso
-                        </button>
-
-                        <button
-                          className="btn-ingresogasto"
-                          onClick={() => {
-                            setTipo("gasto");
-                            setShowSelectorTipo(false);
-                            setMostrarFormulario(true);
-                            scrollToForm();
-                          }}
-                        >
-                          Gasto
-                        </button>
-
-                        <button className="btn-rojo" onClick={() => setShowSelectorTipo(false)}>
-                          Cancelar
-                        </button>
+              fila.forEach((t, index) => {
+                filas.push(
+                  <div
+                    className={`tarjeta-minimal ${t.esMensual ? "gasto-mensual" : ""} ${t.esProgramado ? "esProgramado" : ""} ${t.tipoPago === "credito" ? "transaccion-credito" : ""}`}
+                    key={i + index}
+                  >
+                    <div className="fila-superior">
+                      <div className={`tag ${
+                        t.id_gasto_mensual ? "gasto-mensual" :
+                        t.id_gasto_programado ? "gasto-programado" :
+                        t.tipo
+                      }`}>
+                        {
+                          t.id_gasto_mensual
+                            ? "GASTO MENSUAL"
+                            : t.id_gasto_programado
+                            ? "GASTO PROGRAMADO"
+                            : `${t.tipo.toUpperCase()}${t.importada ? " (IMPORTADO)" : ""}`
+                        }
                       </div>
+                      <div className="fecha">{formatearFechaBonita(t.fecha)}</div>
                     </div>
-                  ) : (
-                    <button className="boton-agregar" onClick={() => setShowSelectorTipo(true)}>＋</button>
-                  )}
-                </div>
-              );
-            }
-          }
 
-          // ⬇️ Si la última fila tiene 2 tarjetas, el "+" va abajo a la izquierda
-          if (transaccionesFiltradas.length % 2 === 0) {
-            filas.push(
-              <div key="mas-izquierda" className="col-izq">
-                {showSelectorTipo ? (
-                  <div className="selector-tipo-popup">
-                    <p>¿Qué deseas agregar?</p>
-                    <div className="botones-selector">
-                      <button
-                        className="btn-ingresogasto"
-                        onClick={() => {
-                          setTipo("ingreso");
-                          setShowSelectorTipo(false);
-                          setMostrarFormulario(true);
-                          scrollToForm();
-                        }}
-                      >
-                        Ingreso
-                      </button>
-
-                      <button
-                        className="btn-ingresogasto"
-                        onClick={() => {
-                          setTipo("gasto");
-                          setShowSelectorTipo(false);
-                          setMostrarFormulario(true);
-                          scrollToForm();
-                        }}
-                      >
-                        Gasto
-                      </button>
-
-                      <button className="btn-rojo" onClick={() => setShowSelectorTipo(false)}>
-                        Cancelar
-                      </button>
+                    <div className="contenido-horizontal">
+                      <div className="item"><span>Monto:</span><div className="monto">${Number(t.monto).toLocaleString("es-CL")}</div></div>
+                      <div className="item">
+                        <span>Categoría:</span>
+                        <div>
+                          {
+                            (() => {
+                              const encontrada = categorias.find(c => Number(c.id_categoria) === Number(t.id_categoria));
+                              return encontrada?.nombre || "Sin categoría";
+                            })()
+                          }
+                        </div>
+                      </div>
+                      <div className="item"><span>Descripción:</span><div>{t.descripcion}</div></div>
+                      <div className="item"><span>Tipo de pago:</span><div>{t.tipoPago}</div></div>
                     </div>
+
+                    {t.imagen && (
+                      <button className="btn-ver-comprobante" onClick={() => {
+                        const url = t.imagen.startsWith("http") ? t.imagen : `http://localhost:5000/imagenes/${t.imagen}`;
+                        setImagenModal(url);
+                        setShowModalImagen(true);
+                      }}>
+                        Ver comprobante
+                      </button>
+                    )}
+
+                    {!t.protegida && (
+                      <div className="menu-transaccion">
+                        <button className="boton-menu" onClick={() => toggleMenu(t.id_transaccion)}>⋯</button>
+                        {menuAbierto === t.id_transaccion && (
+                          <div className="menu-opciones">
+                            {!t.id_gasto_mensual && !t.id_gasto_programado && (
+                              <button className="editar" onClick={() => editarTransaccion(t.id_transaccion)}>Editar</button>
+                            )}
+                            <button onClick={() => eliminarTransaccion(t.id || t.id_transaccion)}>Eliminar</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <button className="boton-agregar" onClick={() => setShowSelectorTipo(true)}>＋</button>
-                )}
-              </div>
-            );
-          }
+                );
+              });
+            }
 
-          return filas;
-        })()}
-
+            return filas;
+          })()}
         </div>
       
         {mostrarFormulario && (
@@ -935,40 +1069,98 @@ export default function Transacciones() {
               <h3>Nueva transacción: {tipo === "gasto" ? "Gasto" : "Ingreso"}</h3>
 
               <div className="grid-formulario">
-                {/* Fecha */}
-                <div>
-                  <label>Fecha:</label>
-                  <input
-                    type="date"
-                    name="fecha"
-                    value={nuevaTransaccion.fecha}
-                    onChange={handleChange}
-                  />
+
+                <div className="botones-tipo-transaccion" style={{ gridColumn: "1 / 4", display: "flex", gap: "1rem", marginBottom: "1rem" }}>
+                  <button
+                    className={`btn-tipo ${tipo === "ingreso" ? "activo ingreso" : ""}`}
+                    onClick={() => setTipo("ingreso")}
+                    type="button"
+                  >
+                    Ingreso
+                  </button>
+                  <button
+                    className={`btn-tipo ${tipo === "gasto" ? "activo gasto" : ""}`}
+                    onClick={() => setTipo("gasto")}
+                    type="button"
+                  >
+                    Gasto
+                  </button>
+                </div>
+                
+                {/* Comprobante */}
+                <div style={{ display: "flex", gap: "1rem", alignItems: "end", gridColumn: "1 / 4" }}>
+                  <div className="campo-imagen" style={{ flex: 1 }}>
+                    <div className="grupo-comprobante">
+                      <label>Comprobante (opcional):</label>
+                      <div className="comprobante-y-boton">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleChange}
+                          ref={fileInputRef}
+                        />
+                        <button className="btn-leer-boleta" onClick={leerBoleta}>
+                          Leer boleta
+                        </button>
+                        <div className="tooltip-ayuda">
+                          <button className="btn-ayuda-ocr">🛈</button>
+                          <div className="tooltip-contenido">
+                            <strong>¿Cómo usar "Leer boleta"?</strong><br />
+                            1. Sube una imagen clara del comprobante.<br />
+                            2. Haz clic en “Leer boleta”.<br />
+                            3. Se detectarán la <em>fecha</em> y el <em>monto total</em> automáticamente.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
 
-                {/* Categoría */}
-                <div>
+                {nuevaTransaccion.imagen && typeof nuevaTransaccion.imagen === "object" && (
+                  <button
+                    className="btn-ver-comprobante"
+                    style={{ marginTop: "0.5rem" }}
+                    onClick={() => {
+                      const url = URL.createObjectURL(nuevaTransaccion.imagen);
+                      setImagenVistaPrevia(url);
+                      setMostrarModalImagen(true);
+                    }}
+                  >
+                    📄 Ver comprobante
+                  </button>
+                )}
+
+                {/* Fecha y Categoría */}
+                <div className="campo-fecha">
+                  <label>Fecha:</label>
+                  <input type="date" name="fecha" value={nuevaTransaccion.fecha} onChange={handleChange} />
+                </div>
+
+                <div className="campo-categoria">
                   <label>Categoría:</label>
                   <select
-                    name="categoria"
-                    value={nuevaTransaccion.categoria}
+                    name="id_categoria"
+                    value={nuevaTransaccion.id_categoria}
                     onChange={handleChange}
                   >
+                    <option value="">Selecciona una categoría</option>
                     {categorias
                       .filter(c => {
                         if (!c.tipo) return false;
                         const tipoCategoria = c.tipo.toLowerCase();
                         return tipoCategoria === tipo || tipoCategoria === "ambos";
                       })
-                      .sort((a, b) => a.nombre === "General" ? -1 : b.nombre === "General" ? 1 : 0)
-                      .map((c, i) => (
-                        <option key={i} value={c.nombre}>{c.nombre}</option>
+                      .map((c) => (
+                        <option key={c.id_categoria} value={c.id_categoria}>
+                          {c.nombre}
+                        </option>
                       ))}
                   </select>
                 </div>
 
-                {/* Descripción */}
-                <div>
+                {/* Descripción (ocupa toda la fila) */}
+                <div className="campo-descripcion" style={{ gridColumn: "1 / 4" }}>
                   <label>Descripción:</label>
                   <input
                     type="text"
@@ -978,8 +1170,8 @@ export default function Transacciones() {
                   />
                 </div>
 
-                {/* Checkbox para usar segundo método */}
-                <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {/* Checkbox para doble método */}
+                <div style={{ gridColumn: "1 / 4", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <input
                     type="checkbox"
                     id="checkbox-doble-pago"
@@ -1006,24 +1198,17 @@ export default function Transacciones() {
                   </label>
                 </div>
 
-                {/* Métodos de pago */}
                 <div className="fila-metodos-pago">
-                  {/* Tipo de pago principal */}
                   <div className="campo-tipopago">
                     <label>Tipo de pago</label>
-                    <select
-                      name="tipoPago"
-                      value={nuevaTransaccion.tipoPago}
-                      onChange={handleChange}
-                    >
-                      <option value="efectivo">Efectivo</option>
-                      <option value="debito">Débito</option>
-                      <option value="credito">Crédito</option>
-                      <option value="transferencia">Transferencia</option>
+                    <select name="tipoPago" value={nuevaTransaccion.tipoPago} onChange={handleChange}>
+                      <option value="">Selecciona</option>
+                      {metodosMostrar.map((m) => (
+                        <option key={m.valor} value={m.valor}>{m.label}</option>
+                      ))}
                     </select>
                   </div>
 
-                  {/* Monto principal */}
                   <div className="campo-monto">
                     <label>Monto total</label>
                     <input
@@ -1034,21 +1219,15 @@ export default function Transacciones() {
                     />
                   </div>
 
-                  {/* Segundo método de pago (si aplica) */}
                   {usarSegundoMetodo && (
                     <>
                       <div className="campo-tipopago">
                         <label>Segundo tipo de pago</label>
-                        <select
-                          name="tipoPago2"
-                          value={nuevaTransaccion.tipoPago2}
-                          onChange={handleChange}
-                        >
+                        <select name="tipoPago2" value={nuevaTransaccion.tipoPago2} onChange={handleChange}>
                           <option value="">Selecciona</option>
-                          <option value="efectivo">Efectivo</option>
-                          <option value="debito">Débito</option>
-                          <option value="credito">Crédito</option>
-                          <option value="transferencia">Transferencia</option>
+                          {metodosMostrar.map((m) => (
+                            <option key={m.valor} value={m.valor}>{m.label}</option>
+                          ))}
                         </select>
                       </div>
 
@@ -1065,69 +1244,102 @@ export default function Transacciones() {
                   )}
                 </div>
 
-                {/* Comprobante opcional */}
-                <div>
-                  <label>Comprobante (opcional):</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleChange}
-                    ref={fileInputRef}
-                  />
-                </div>
-                {/* Campos exclusivos de pago con crédito */}
-                  {nuevaTransaccion.tipoPago === "credito" && (
-                    <>
-                      <div>
-                        <label>Cuotas:</label>
-                        <input
-                          type="number"
-                          name="cuotas"
-                          min="1"
-                          value={nuevaTransaccion.cuotas}
-                          onChange={handleChange}
-                        />
-                      </div>
+                {/* Créditos (si se eligió crédito) */}
+                {nuevaTransaccion.tipoPago === "credito" && (
+                  <>
+                    <div>
+                      <label>Cuotas:</label>
+                      <input
+                        type="number"
+                        name="cuotas"
+                        min="1"
+                        value={nuevaTransaccion.cuotas}
+                        onChange={handleChange}
+                      />
+                    </div>
 
-                      <div>
-                        <label>Interés (%):</label>
-                        <input
-                          type="number"
-                          name="interes"
-                          step="0.1"
-                          value={nuevaTransaccion.interes}
-                          onChange={handleChange}
-                        />
-                      </div>
+                    <div>
+                      <label>Interés (%):</label>
+                      <input
+                        type="number"
+                        name="interes"
+                        step="0.1"
+                        value={nuevaTransaccion.interes}
+                        onChange={handleChange}
+                      />
+                    </div>
 
-                      <div>
-                        <label>Total Crédito:</label>
-                        <input
-                          type="text"
-                          name="totalCredito"
-                          value={nuevaTransaccion.totalCredito}
-                          readOnly
-                        />
-                      </div>
+                    <div>
+                      <label>Total Crédito:</label>
+                      <input
+                        type="text"
+                        name="totalCredito"
+                        value={nuevaTransaccion.totalCredito}
+                        readOnly
+                      />
+                    </div>
 
-                      <div>
-                        <label>Valor por Cuota:</label>
-                        <input
-                          type="text"
-                          name="valorCuota"
-                          value={nuevaTransaccion.valorCuota}
-                          readOnly
-                        />
-                      </div>
-                    </>
-                  )}
+                    <div>
+                      <label>Valor por Cuota:</label>
+                      <input
+                        type="text"
+                        name="valorCuota"
+                        value={nuevaTransaccion.valorCuota}
+                        readOnly
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Botones de acción */}
               <div className="acciones-transaccion">
                 <button className="btn-guardar" onClick={enviarTransaccion}>Guardar</button>
-                <button className="btn-cancelar" onClick={() => setMostrarFormulario(false)}>Cancelar</button>
+                <button
+                  className="btn-cancelar"
+                  onClick={() => {
+                    limpiarFormulario();
+                    setMostrarFormulario(false);
+                  }}
+                >
+                  Cancelar
+                </button>
               </div>
+
+                {/* Previsualización de datos OCR */}
+                {previaOCR && (
+                  <div className="modal-previa-ocr">
+                    <h4>✅ Datos detectados desde la boleta:</h4>
+                    <p><strong>Comercio:</strong> {previaOCR.descripcion}</p>
+                    <p><strong>Fecha:</strong> {previaOCR.fecha}</p>
+                    <p><strong>Monto total:</strong> ${Number(previaOCR.monto).toLocaleString("es-CL")}</p>
+
+                    <div className="botones-previa-ocr">
+                      <button
+                        className="btn-guardar"
+                        onClick={() => {
+                          setNuevaTransaccion(prev => ({
+                            ...prev,
+                            descripcion: previaOCR.descripcion,
+                            monto: previaOCR.monto,
+                            fecha: previaOCR.fecha
+                          }));
+                          setPreviaOCR(null);
+                        }}
+                      >
+                        Usar estos datos
+                      </button>
+
+                      <button
+                        className="btn-cancelar"
+                        onClick={() => setPreviaOCR(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
             </div>
           </div>
         )}
@@ -1297,7 +1509,7 @@ export default function Transacciones() {
             </div>
 
             <div className="acciones-transaccion">
-              <button className="btn-guardar" onClick={enviarTransaccion}>Guardar cambios</button>
+              <button className="btn-guardar" onClick={actualizarTransaccion}>Guardar cambios</button>
               <button className="btn-cancelar" onClick={() => setShowModalEditar(false)}>Cancelar</button>
             </div>
           </div>
@@ -1332,6 +1544,30 @@ export default function Transacciones() {
             </div>
           </div>
         )}
+
+        {mostrarModalImagen && (
+          <div className="modal-overlay" onClick={() => setMostrarModalImagen(false)}>
+            <div className="modal-imagen" onClick={(e) => e.stopPropagation()}>
+              {imagenVistaPrevia ? (
+                <img
+                  src={imagenVistaPrevia}
+                  alt="Vista previa comprobante"
+                  style={{ maxWidth: "100%", maxHeight: "70vh", borderRadius: "8px" }}
+                />
+              ) : (
+                <p style={{ color: "#ef4444" }}>No hay imagen cargada.</p>
+              )}
+              <button
+                className="btn-cerrar-modal"
+                style={{ marginTop: "1rem" }}
+                onClick={() => setMostrarModalImagen(false)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+
               </main>
         <Footer />
       </div>

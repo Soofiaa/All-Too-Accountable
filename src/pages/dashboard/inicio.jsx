@@ -67,9 +67,14 @@ export default function DashboardFinanciero() {
   const [anioSeleccionado, setAnioSeleccionado] = useState(fechaActual.getFullYear());
   const mesActual = mesSeleccionado - 1;
   const anioActual = anioSeleccionado;
-  const [fechaSalario, setFechaSalario] = useState(""); // nueva fecha asociada al salario
+  const [fechaSalario, setFechaSalario] = useState(() => {
+    const hoy = new Date().toISOString().split("T")[0];
+    return hoy;
+  });
   const [pestanaActiva, setPestanaActiva] = useState("resumen");
   const idUsuario = localStorage.getItem("id_usuario");
+  const [categorias, setCategorias] = useState([]);
+
 
   
   useEffect(() => {
@@ -133,6 +138,17 @@ export default function DashboardFinanciero() {
     const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
 
+    fetch(`http://localhost:5000/api/categorias/${id_usuario}`)
+      .then(res => res.json())
+      .then(setCategorias)
+      .catch(err => console.error("Error al cargar categorías:", err));
+  }, []);
+
+
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+
     fetch(`http://localhost:5000/api/transacciones_completas?id_usuario=${id_usuario}&mes=${mesSeleccionado}&anio=${anioSeleccionado}`)
       .then(res => {
         if (!res.ok) throw new Error("Error al obtener transacciones completas");
@@ -167,7 +183,7 @@ export default function DashboardFinanciero() {
         const monto = Number(t.monto);
         if (t.tipo === "ingreso") {
           datosPorDia[clave].ingresos += monto;
-        } else if (t.tipo === "gasto") {
+        } else if (t.tipo === "gasto" && t.tipoPago !== "credito") {
           datosPorDia[clave].gastos += monto;
         }
 
@@ -190,7 +206,7 @@ export default function DashboardFinanciero() {
         .filter(g => Number(g.dia_pago) === dia)
         .map(g => ({
           tipo: "gasto",
-          descripcion: g.nombre || "Gasto mensual",
+          descripcion: g.nombre || "Gasto Mensual",
           monto: Number(g.monto),
           esMensual: true
         }));
@@ -384,7 +400,7 @@ export default function DashboardFinanciero() {
       axios.post("http://localhost:5000/api/actualizar_salario", {
         id_usuario: parseInt(id_usuario),
         salario: limpio,
-        fecha: fechaFinal
+        fecha_salario: fechaFinal
       })
       .then(() => {
         setSalario(limpio);
@@ -684,7 +700,7 @@ export default function DashboardFinanciero() {
                 </div>
               </div>
 
-              {/* FACTURACIÓN */}
+              {/* FACTURACIÓN}
               <div className="info-box compacta fila-horizontal">
                 <div className="texto-horizontal">
                   <span className="label">Día de facturación:</span>
@@ -692,7 +708,7 @@ export default function DashboardFinanciero() {
                 </div>
                 <button className="btn-azul" onClick={() => setMostrarModalFacturacion(true)}>Editar</button>
               </div>
-
+              */}
             </div>
 
               {/* SALDO RESTANTE */}
@@ -721,7 +737,7 @@ export default function DashboardFinanciero() {
                 <span className="label">Últimos movimientos:</span>
                 <div className="info-row" style={{ flexDirection: "column", alignItems: "flex-start", gap: "0.5rem" }}>
                   {transacciones
-                    .filter(t => t.visible !== false)
+                    .filter(t => t.visible !== false && t.tipoPago !== "credito")
                     .slice(-3)
                     .reverse()
                     .map((t, index) => (
@@ -738,6 +754,65 @@ export default function DashboardFinanciero() {
                   <button className="btn-azul" onClick={() => navigate("/transacciones")}>
                     Ver más transacciones
                   </button>
+                </div>
+              </div>
+
+              <div className="info-box">
+                {/* CONTROL DE LÍMITES POR CATEGORÍA */}
+                <div className="dashboard-card limites-categorias">
+                  <h3>Control de límites por categoría (mes actual)</h3>
+                  <table className="tabla-limites">
+                    <thead>
+                      <tr>
+                        <th>Categoría</th>
+                        <th>Gasto actual</th>
+                        <th>Monto límite</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...categorias]
+                        .sort((a, b) => {
+                          const orden = {
+                            "General": 0,
+                            "Gasto Mensual": 1,
+                            "Gasto Programado": 2
+                          };
+                          const ordenA = orden[a.nombre] ?? 99;
+                          const ordenB = orden[b.nombre] ?? 99;
+                          return ordenA - ordenB || a.nombre.localeCompare(b.nombre);
+                        })
+                        .map((cat, i) => {
+                          const transaccionesCategoria = transacciones.filter(t =>
+                            t.tipo === "gasto" &&
+                            t.visible !== false &&
+                            t.tipoPago !== "credito" &&
+                            Number(t.id_categoria) === Number(cat.id_categoria)
+                          );
+                          const gastoActual = transaccionesCategoria.reduce((acc, t) => acc + parseFloat(t.monto), 0);
+                          const limite = cat.monto_limite || 0;
+
+                          return (
+                            <tr key={i}>
+                              <td>{cat.nombre}</td>
+                              <td>${gastoActual.toLocaleString("es-CL")}</td>
+                              <td>{limite !== 0 ? `$${limite.toLocaleString("es-CL")}` : "Sin límite"}</td>
+                              <td>
+                                {limite !== 0 ? (
+                                  gastoActual > limite ? (
+                                    <span className="estado-sobrepasado">Sobrepasado</span>
+                                  ) : (
+                                    <span className="estado-dentro">Dentro del límite</span>
+                                  )
+                                ) : (
+                                  <span className="estado-sin-limite">No hay límite</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -780,8 +855,9 @@ export default function DashboardFinanciero() {
                   }
                 }}
               />
-              <label>Fecha desde que se aplica el salario:</label>
+              <label htmlFor="fecha-salario">Fecha desde que se aplica el salario:</label>
               <input
+                id="fecha-salario"
                 type="date"
                 value={fechaSalario}
                 onChange={(e) => setFechaSalario(e.target.value)}

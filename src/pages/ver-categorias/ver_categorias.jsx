@@ -79,15 +79,22 @@ const Categorias = () => {
       alert("Todos los campos son obligatorios.");
       return;
     }
-  
+
     const idUsuario = localStorage.getItem("id_usuario");
-    const montoLimpio = nuevaCategoria.monto_limite ? parseInt(nuevaCategoria.monto_limite.replace(/\./g, "")) : 0;
-  
+    const montoLimpio = nuevaCategoria.monto_limite
+      ? parseInt(nuevaCategoria.monto_limite.replace(/\./g, ""))
+      : 0;
+
     if (categoriaEditando !== null) {
       const categoriaAEditar = categorias[categoriaEditando];
-  
+
+      if (!categoriaAEditar?.id_categoria) {
+        alert("⚠️ No se encontró el ID de la categoría a editar.");
+        return;
+      }
+
       try {
-        const respuesta = await fetch(`http://localhost:5000/api/categorias/${categoriaAEditar.id}`, {
+        const respuesta = await fetch(`http://localhost:5000/api/categorias/${categoriaAEditar.id_categoria}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -97,14 +104,14 @@ const Categorias = () => {
             id_usuario: parseInt(idUsuario)
           }),
         });
-  
+
         if (!respuesta.ok) {
           const errorText = await respuesta.text();
           console.error("Error al editar categoría:", errorText);
           alert("No se pudo editar la categoría.");
           return;
         }
-  
+
         const nuevasCategorias = [...categorias];
         nuevasCategorias[categoriaEditando] = {
           ...nuevasCategorias[categoriaEditando],
@@ -113,12 +120,12 @@ const Categorias = () => {
           monto_limite: montoLimpio
         };
         setCategorias(nuevasCategorias);
-  
+
       } catch (error) {
         console.error("Error de red al editar:", error);
         alert("Error de red al editar");
       }
-  
+
     } else {
       const nueva = {
         nombre: nuevaCategoria.nombre.trim(),
@@ -126,30 +133,30 @@ const Categorias = () => {
         monto_limite: montoLimpio,
         id_usuario: parseInt(idUsuario)
       };
-  
+
       try {
         const respuesta = await fetch("http://localhost:5000/api/categorias/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nueva)
         });
-  
+
         if (!respuesta.ok) {
           const errorText = await respuesta.text();
           console.error("Error al crear categoría:", errorText);
           alert("No se pudo crear la categoría.");
           return;
         }
-  
+
         const nuevaCategoriaConEditable = { ...nueva, editable: true };
         setCategorias(prev => [...prev, nuevaCategoriaConEditable]);
-  
+
       } catch (error) {
         console.error("Error de red al crear:", error);
         alert("Error de red al crear");
       }
     }
-  
+
     setMostrarModalAgregar(false);
     setCategoriaEditando(null);
     setNuevaCategoria({ nombre: "", tipo: "", monto_limite: "" });
@@ -186,13 +193,13 @@ const Categorias = () => {
                     {categoria.monto_limite ? `$${categoria.monto_limite.toLocaleString("es-CL")}` : "Sin límite"}
                   </td>
                   <td className="acciones">
-                    {categoria.editable !== false ? (
+                    {["General"].includes(categoria.nombre) ? (
+                      <span style={{ opacity: 0.5 }}>–</span>
+                    ) : (
                       <>
                         <button className="btn-editar" onClick={() => handleEditar(idx)}>Editar</button>
                         <button className="btn-eliminar" onClick={() => handleEliminar(idx)}>Eliminar</button>
                       </>
-                    ) : (
-                      <span style={{ opacity: 0.5 }}>–</span>
                     )}
                   </td>
                 </tr>

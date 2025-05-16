@@ -18,7 +18,7 @@ const PagosRecurrentes = () => {
   const [alertas, setAlertas] = useState([]);
   const [gastosMensuales, setgastosMensuales] = useState([]);
   const [pagos, setPagos] = useState([]);
-  const [mostrarModal, setMostrarModal] = useState(false);
+  const [categorias, setCategorias] = useState([]);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
   const [tipoNuevoPago, setTipoNuevoPago] = useState("mensual");
@@ -28,94 +28,151 @@ const PagosRecurrentes = () => {
     dia_pago: "",
     fecha_emision: "",
     dias_cheque: "",
-    tipo_pago: "debito"
+    tipo_pago: "debito",
+    id_categoria: ""
   });
+  const [gastosDesactivados, setGastosDesactivados] = useState([]);
+  const [programadosDesactivados, setProgramadosDesactivados] = useState([]);
+  const [todosRecurrentesDesactivados, setTodosRecurrentesDesactivados] = useState([]);
+  const [mensajeModal, setMensajeModal] = useState("");
+  const [accionModal, setAccionModal] = useState(() => () => {});
+  const [mostrarModalFormulario, setMostrarModalFormulario] = useState(false);
+  const [mostrarModalConfirmacion, setMostrarModalConfirmacion] = useState(false);
 
 
   useEffect(() => {
-  const obtenerPagos = async () => {
-    try {
-      const resMensuales = await fetch(`http://localhost:5000/api/gastos_mensuales?id_usuario=${idUsuario}`);
-      const mensuales = await resMensuales.json();
-      const resProgramados = await fetch(`http://localhost:5000/api/pagos_programados/${idUsuario}`);
-      const programados = await resProgramados.json();
+    const obtenerPagos = async () => {
+      try {
+        await fetch(`http://localhost:5000/api/pagos_programados/actualizar_estado_automatico/${idUsuario}`, {
+          method: "PUT"
+        });
+        const resMensuales = await fetch(`http://localhost:5000/api/gastos_mensuales?id_usuario=${idUsuario}`);
+        const mensuales = await resMensuales.json();
+        const resProgramados = await fetch(`http://localhost:5000/api/pagos_programados/${idUsuario}`);
+        const programados = await resProgramados.json();
 
-      console.log("📦 Datos recibidos:", programados);
+        console.log("📦 Datos recibidos:", programados);
 
-      const pagosMensuales = mensuales.map(p => ({
-        id: p.id_gasto,
-        descripcion: p.descripcion
-          ? `${p.nombre} – ${p.descripcion}`
-          : p.nombre,
-        monto: p.monto,
-        dia_pago: p.dia_pago,
-        fecha: `Día ${p.dia_pago} de cada mes`,
-        tipo: "Mensual"
-      }));
-
-      const pagosProgramados = programados.map(p => {
-        const [anio, mes, dia] = p.fecha_emision.split("-");
-        const fechaEmisionObj = new Date(Number(anio), Number(mes) - 1, Number(dia));
-        const fechaCobro = new Date(
-          fechaEmisionObj.getFullYear(),
-          fechaEmisionObj.getMonth(),
-          fechaEmisionObj.getDate() + (p.dias_cheque || 0)
-        );
-
-        return {
-          id: p.id_gasto_programado,
-          descripcion: p.descripcion,
+        const pagosMensuales = mensuales.filter(p => p.activo).map(p => ({
+          id: p.id_gasto,
+          descripcion: p.descripcion ? `${p.nombre} – ${p.descripcion}` : p.nombre,
           monto: p.monto,
-          fecha_emision: p.fecha_emision,
-          fecha: p.tipo_pago === "cheque"
-            ? `Emisión: ${fechaEmisionObj.toLocaleDateString("es-CL")} | Cobro: ${fechaCobro.toLocaleDateString("es-CL")}`
-            : fechaEmisionObj.toLocaleDateString("es-CL"),
-          tipo_pago: p.tipo_pago,
-          dias_cheque: p.dias_cheque,
-          tipo: "Programado"
-        };
-      });
+          dia_pago: p.dia_pago,
+          fecha: `Día ${p.dia_pago} de cada mes`,
+          tipo: "Mensual",
+          id_categoria: p.id_categoria
+        }));
 
-      const pagosOrdenados = [...pagosProgramados, ...pagosMensuales];
+        const gastosMensualesDesactivados = mensuales
+          .filter(p => !p.activo)
+          .map(p => ({
+            ...p,
+            tipo: "Mensual",
+            fecha: "-",
+            dias_cheque: "-",
+          }));
 
-      pagosOrdenados.sort((a, b) => {
-        if (a.tipo !== b.tipo) {
-          return a.tipo === "Programado" ? -1 : 1; // Programados primero
-        }
+        setGastosDesactivados(gastosMensualesDesactivados);
 
-        // Si ambos son del mismo tipo, ordenar por fecha
-        const fechaA = a.tipo === "Programado"
-          ? new Date(a.fecha_emision)
-          : new Date(new Date().setDate(a.dia_pago || 1)); // Día del mes actual
+        const pagosProgramados = programados
+          .filter(p => p.activo) // ✅ solo los activos
+          .map(p => {
+            const [anio, mes, dia] = p.fecha_emision.split("-");
+            const fechaEmisionObj = new Date(Number(anio), Number(mes) - 1, Number(dia));
+            const fechaCobro = new Date(
+              fechaEmisionObj.getFullYear(),
+              fechaEmisionObj.getMonth(),
+              fechaEmisionObj.getDate() + (p.dias_cheque || 0)
+            );
 
-        const fechaB = b.tipo === "Programado"
-          ? new Date(b.fecha_emision)
-          : new Date(new Date().setDate(b.dia_pago || 1));
+            return {
+              id: p.id_gasto_programado,
+              descripcion: p.descripcion,
+              monto: p.monto,
+              fecha_emision: p.fecha_emision,
+              fecha: p.tipo_pago === "cheque"
+                ? `Emisión: ${fechaEmisionObj.toLocaleDateString("es-CL")} | Cobro: ${fechaCobro.toLocaleDateString("es-CL")}`
+                : fechaEmisionObj.toLocaleDateString("es-CL"),
+              tipo_pago: p.tipo_pago,
+              dias_cheque: p.dias_cheque,
+              tipo: "Programado",
+              id_categoria: p.id_categoria
+            };
+          });
 
-        return fechaA - fechaB;
-      });
+        const pagosProgramadosDesactivados = programados
+          .filter(p => !p.activo)
+          .map(p => ({
+            ...p,
+            tipo: "Programado",
+            fecha: p.fecha_emision,
+            dias_cheque: p.dias_cheque,
+          }));
 
-      setPagos(pagosOrdenados);
+        setProgramadosDesactivados(pagosProgramadosDesactivados);
 
-      // Calcular alertas: pagos programados con fecha próxima
-      const hoy = new Date();
-      const tresDiasDespues = new Date();
-      tresDiasDespues.setDate(hoy.getDate() + 3);
+        const todosDesactivados = [
+          ...gastosMensualesDesactivados.map(g => ({
+            ...g,
+            origen: "Mensual"
+          })),
+          ...pagosProgramadosDesactivados.map(p => ({
+            ...p,
+            origen: "Programado"
+          }))
+        ];
 
-      const alertasDetectadas = pagosProgramados.filter(p => {
-        const fecha = new Date(p.fecha_emision);
-        return fecha >= hoy && fecha <= tresDiasDespues;
-      });
+        setTodosRecurrentesDesactivados(todosDesactivados);
 
-      setAlertas(alertasDetectadas);
+        const pagosOrdenados = [...pagosProgramados, ...pagosMensuales];
 
-    } catch (error) {
-      console.error("Error al obtener pagos:", error);
-    }
-  };
+        pagosOrdenados.sort((a, b) => {
+          if (a.tipo !== b.tipo) {
+            return a.tipo === "Programado" ? -1 : 1;
+          }
 
-  obtenerPagos();
-}, [idUsuario]);
+          const fechaA = a.tipo === "Programado"
+            ? new Date(a.fecha_emision)
+            : new Date(new Date().setDate(a.dia_pago || 1));
+
+          const fechaB = b.tipo === "Programado"
+            ? new Date(b.fecha_emision)
+            : new Date(new Date().setDate(b.dia_pago || 1));
+
+          return fechaA - fechaB;
+        });
+
+        setPagos(pagosOrdenados);
+
+        // Alertas
+        const hoy = new Date();
+        const tresDiasDespues = new Date();
+        tresDiasDespues.setDate(hoy.getDate() + 3);
+
+        const alertasDetectadas = pagosProgramados.filter(p => {
+          const fecha = new Date(p.fecha_emision);
+          return fecha >= hoy && fecha <= tresDiasDespues;
+        });
+
+        setAlertas(alertasDetectadas);
+      } catch (error) {
+        console.error("Error al obtener pagos:", error);
+      }
+    };
+
+    obtenerPagos();
+  }, [idUsuario]);
+
+  
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+
+    fetch(`http://localhost:5000/api/categorias/${id_usuario}`)
+      .then(res => res.json())
+      .then(data => setCategorias(data))
+      .catch(err => console.error("Error al cargar categorías:", err));
+  }, []);
 
 
   useEffect(() => {
@@ -174,6 +231,7 @@ const PagosRecurrentes = () => {
             body: JSON.stringify({
               nombre: nuevoPago.descripcion,
               descripcion: "",
+              id_categoria: nuevoPago.id_categoria,
               monto: parseFloat(nuevoPago.monto),
               dia_pago: parseInt(nuevoPago.dia_pago),
               id_usuario: idUsuario
@@ -188,23 +246,44 @@ const PagosRecurrentes = () => {
               monto: parseFloat(nuevoPago.monto),
               fecha_emision: nuevoPago.fecha_emision,
               tipo_pago: nuevoPago.tipo_pago,
-              dias_cheque: nuevoPago.tipo_pago === "cheque" ? parseInt(nuevoPago.dias_cheque) : null
+              dias_cheque: nuevoPago.tipo_pago === "cheque" ? parseInt(nuevoPago.dias_cheque) : null,
+              id_categoria: nuevoPago.id_categoria, // ✅ agregado
+              id_usuario: idUsuario
             })
           });
         }
       } else {
         if (tipoNuevoPago === "mensual") {
-          await fetch("http://localhost:5000/api/gastos_mensuales", {
+          const respuesta = await fetch("http://localhost:5000/api/gastos_mensuales", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               nombre: nuevoPago.descripcion,
               descripcion: "",
+              id_categoria: nuevoPago.id_categoria,
               monto: parseFloat(nuevoPago.monto),
               dia_pago: parseInt(nuevoPago.dia_pago),
               id_usuario: idUsuario
             })
           });
+
+          const data = await respuesta.json();
+
+          // Si el gasto fue creado con éxito, insertar su transacción
+          if (respuesta.ok && data.id_gasto) {
+            try {
+              const insertar = await fetch(`http://localhost:5000/api/gastos_mensuales/insertar_transaccion/${data.id_gasto}`, {
+                method: "POST"
+              });
+
+              if (!insertar.ok) {
+                const errorTexto = await insertar.text();
+                console.warn("⚠️ No se insertó transacción automáticamente:", errorTexto);
+              }
+            } catch (error) {
+              console.error("❌ Error al insertar transacción:", error);
+            }
+          }
         } else {
           await fetch("http://localhost:5000/api/pagos_programados", {
             method: "POST",
@@ -215,6 +294,7 @@ const PagosRecurrentes = () => {
               fecha_emision: nuevoPago.fecha_emision,
               tipo_pago: nuevoPago.tipo_pago,
               dias_cheque: nuevoPago.tipo_pago === "cheque" ? parseInt(nuevoPago.dias_cheque) : null,
+              id_categoria: nuevoPago.id_categoria, // ✅ agregado
               id_usuario: idUsuario
             })
           });
@@ -244,7 +324,6 @@ const PagosRecurrentes = () => {
       }
 
       await fetch(url, { method: "DELETE" });
-      alert("Pago eliminado correctamente");
       window.location.reload();
     } catch (err) {
       console.error(err);
@@ -263,14 +342,16 @@ const PagosRecurrentes = () => {
             <div className="alerta-vencimiento">
               <strong>⚠️ Tienes {alertas.length} pago(s) programado(s) por vencer en los próximos días:</strong>
               <ul>
-                {alertas.map((a, idx) => (
-                  <li key={idx}>{a.descripcion} → vence el {new Date(a.fecha_emision).toLocaleDateString("es-CL")}</li>
+                {alertas.map((a) => (
+                  <li key={a.id_gasto_programado}>
+                    {a.descripcion} → vence el {new Date(a.fecha_emision).toLocaleDateString("es-CL")}
+                  </li>
                 ))}
               </ul>
             </div>
           )}
           <button className="btn-agregar" onClick={() => {
-            setMostrarModal(true);
+            setMostrarModalFormulario(true);
             setModoEdicion(false);
             setNuevoPago({
               descripcion: "",
@@ -284,30 +365,37 @@ const PagosRecurrentes = () => {
             Agregar nuevo pago
           </button>
 
+          {/* Tabla de gastos activos */}
           <table className="tabla-categorias">
             <thead>
               <tr>
+                <th>Tipo</th>
                 <th>Descripción</th>
                 <th>Monto</th>
+                <th>Categoría</th>
                 <th>Fecha</th>
-                <th>Tipo</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {pagos.map((pago) => (
                 <tr key={pago.id}>
+                  <td>{pago.tipo}</td>
                   <td>{pago.descripcion}</td>
                   <td>${Number(pago.monto).toLocaleString("es-CL")}</td>
+                  <td>
+                    {categorias.find(c => Number(c.id_categoria) === Number(pago.id_categoria))?.nombre || "Sin categoría"}
+                  </td>
                   <td>{pago.fecha}</td>
-                  <td>{pago.tipo}</td>
                   <td className="acciones">
                     <button
                       className="btn-editar"
                       onClick={() => {
-                        const fechaFormateada = new Date(pago.fecha_emision).toISOString().split("T")[0];
+                        const fechaFormateada = pago.fecha_emision
+                          ? new Date(pago.fecha_emision).toISOString().split("T")[0]
+                          : ""; // para pagos mensuales que no tienen fecha_emision
 
-                        setMostrarModal(true);
+                        setMostrarModalFormulario(true);
                         setModoEdicion(true);
                         setIdEditando(pago.id);
                         setTipoNuevoPago(pago.tipo.toLowerCase());
@@ -317,18 +405,100 @@ const PagosRecurrentes = () => {
                           dia_pago: pago.dia_pago || "",
                           fecha_emision: fechaFormateada,
                           tipo_pago: pago.tipo_pago || "debito",
-                          dias_cheque: pago.dias_cheque || ""
+                          dias_cheque: pago.dias_cheque || "",
+                          id_categoria: pago.id_categoria || ""
                         });
                       }}
                     >Editar</button>
-                    <button className="btn-eliminar" onClick={() => handleEliminar(pago)}>Eliminar</button>
+                    {pago.tipo === "Mensual" ? (
+                      <button
+                        className="btn-eliminar"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMensajeModal("¿Deseas desactivar este gasto mensual?");
+                          setAccionModal(() => async () => {
+                            await fetch(`http://localhost:5000/api/gastos_mensuales/desactivar/${pago.id}?id_usuario=${idUsuario}`, {
+                              method: "PUT"
+                            });
+                            window.location.reload();
+                          });
+                          setMostrarModalConfirmacion(true);
+                        }}
+                      >
+                        Desactivar
+                      </button>
+                    ) : (
+                      <button className="btn-eliminar" onClick={() => handleEliminar(pago)}>Eliminar</button>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          
+          {/* Tabla de gastos desactivados */}
+          <h2 className="titulo-categorias" style={{ marginTop: "2rem" }}>Gastos recurrentes desactivados</h2>
+          <table className="tabla-categorias">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th>Monto</th>
+                <th>Categoría</th>
+                <th>Fecha de cobro</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {todosRecurrentesDesactivados.map((gasto) => {
+                let fecha;
 
-          {mostrarModal && (
+                if (gasto.origen === "Mensual") {
+                  fecha = `Día ${gasto.dia_pago}`;
+                } else {
+                  const [anio, mes, dia] = gasto.fecha.split("-").map(Number);
+                  const fechaCobro = new Date(anio, mes - 1, dia + (gasto.dias_cheque || 0));
+                  const cobroDia = fechaCobro.getDate().toString().padStart(2, "0");
+                  const cobroMes = (fechaCobro.getMonth() + 1).toString().padStart(2, "0");
+                  const cobroAnio = fechaCobro.getFullYear();
+                  fecha = `${cobroDia}-${cobroMes}-${cobroAnio}`;
+                }
+
+                return (
+                  <tr key={`${gasto.origen}-${gasto.id_gasto || gasto.id_gasto_programado}`}>
+                    <td>{gasto.origen}</td>
+                    <td>{gasto.nombre || gasto.descripcion}</td>
+                    <td>${Number(gasto.monto).toLocaleString("es-CL")}</td>
+                    <td>{categorias.find(c => Number(c.id_categoria) === Number(gasto.id_categoria))?.nombre || "Sin categoría"}</td>
+                    <td>{fecha}</td>
+                    <td>
+                      {gasto.origen === "Mensual" ? (
+                        <button
+                          className="btn-reactivar"
+                          onClick={() => {
+                            setMensajeModal("¿Recuperar este gasto mensual?");
+                            setAccionModal(() => async () => {
+                              await fetch(`http://localhost:5000/api/gastos_mensuales/reactivar/${gasto.id_gasto}?id_usuario=${idUsuario}`, {
+                                method: "PUT"
+                              });
+                              window.location.reload();
+                            });
+                            setMostrarModalConfirmacion(true);
+                          }}
+                        >
+                          Recuperar
+                        </button>
+                      ) : (
+                        <span style={{ fontStyle: "italic", color: "gray" }}>Desactivado</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {mostrarModalFormulario && (
             <div className="modal-overlay">
               <div className="modal-box">
                 <h3 className="modal-titulo">{modoEdicion ? "Editar pago" : "Agregar nuevo pago"}</h3>
@@ -344,6 +514,26 @@ const PagosRecurrentes = () => {
                 <label>
                   Descripción:
                   <input type="text" value={nuevoPago.descripcion} onChange={(e) => setNuevoPago({ ...nuevoPago, descripcion: e.target.value })} />
+                </label>
+
+                <label>
+                  Categoría:
+                  <select
+                    value={nuevoPago.id_categoria || ""}
+                    onChange={(e) =>
+                      setNuevoPago({
+                        ...nuevoPago,
+                        id_categoria: e.target.value === "" ? "" : Number(e.target.value),
+                      })
+                    }
+                  >
+                    <option value="">Selecciona categoría</option>
+                    {categorias.map((cat) => (
+                      <option key={cat.id_categoria} value={cat.id_categoria}>
+                        {cat.nombre}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label>
@@ -391,11 +581,37 @@ const PagosRecurrentes = () => {
 
                 <div className="modal-acciones">
                   <button className="btn-aceptar" onClick={handleGuardarNuevoPago}>Guardar</button>
-                  <button className="btn-cancelar" onClick={() => setMostrarModal(false)}>Cancelar</button>
+                  <button className="btn-cancelar" onClick={() => setMostrarModalConfirmacion(false)}>Cancelar</button>
                 </div>
               </div>
             </div>
           )}
+
+          {mostrarModalConfirmacion && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3 className="modal-titulo">{mensajeModal}</h3>
+                <div className="modal-acciones">
+                  <button
+                    className="btn-aceptar"
+                    onClick={() => {
+                      accionModal();
+                      setMostrarModalConfirmacion(false);
+                    }}
+                  >
+                    Sí, confirmar
+                  </button>
+                  <button
+                    className="btn-cancelar"
+                    onClick={() => setMostrarModalConfirmacion(false)}
+                  >
+                    No, cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
       <Footer />
