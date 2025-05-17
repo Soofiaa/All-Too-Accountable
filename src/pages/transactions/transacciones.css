@@ -1329,7 +1329,7 @@ label.required::after {
 }
 
 .btn-ayuda-ocr {
-  background-color: #00ffff;
+  background-color: #ff8000;
   color: white;
   border: none;
   border-radius: 50%;
@@ -1393,4 +1393,31 @@ label.required::after {
 .btn-tipo.gasto.activo {
   background-color: #ef4444; /* rojo */
   color: white;
+}
+
+.campo-activo-dictado {
+  animation: glow 1.5s ease-in-out infinite;
+  border: 2px solid #00bfa6;
+  border-radius: 8px;
+}
+
+@keyframes glow {
+  0%   { box-shadow: 0 0 0px rgba(0, 191, 166, 0.5); }
+  50%  { box-shadow: 0 0 12px rgba(0, 191, 166, 0.8); }
+  100% { box-shadow: 0 0 0px rgba(0, 191, 166, 0.5); }
+}
+
+.ayuda-dictado-categorias {
+  background: #eef6ff;
+  border-left: 4px solid #3b82f6;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  color: #1e40af;
+}
+.ayuda-dictado-categorias ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
 }

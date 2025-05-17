@@ -5,6 +5,11 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import "./transacciones.css";
+import {
+  inicializarReconocimiento,
+  iniciarDictadoPaso,
+  pasosDictado
+} from "../../utils/dictado/dictado_transaccion";
 
 
 const MESES_NOMBRES = [
@@ -28,7 +33,8 @@ export default function Transacciones() {
     totalCredito: "",
     valorCuota: ""
   });
-  
+
+  const idUsuario = localStorage.getItem("idUsuario");
   const [tipo, setTipo] = useState("gasto");
   const [categorias, setCategorias] = useState([]);
   const [transacciones, setTransacciones] = useState([]);
@@ -59,6 +65,19 @@ export default function Transacciones() {
   const [previaOCR, setPreviaOCR] = useState(null);
   const [imagenVistaPrevia, setImagenVistaPrevia] = useState(null);
   const [mostrarModalImagen, setMostrarModalImagen] = useState(false);
+  const [modoDictado, setModoDictado] = useState(false);
+  const [pasoDictado, setPasoDictado] = useState(0);
+  const recognition = inicializarReconocimiento();
+  const [dictadoFinalizado, setDictadoFinalizado] = useState(false);
+
+  useEffect(() => {
+    // Expone esta función para que otro archivo pueda activarla
+    window.setDictadoFinalizado = setDictadoFinalizado;
+
+    // Limpieza: borra la referencia si el componente se desmonta
+    return () => { window.setDictadoFinalizado = null };
+  }, []);
+
 
   const metodosIngreso = [
     { valor: "efectivo", label: "Efectivo" },
@@ -132,19 +151,7 @@ export default function Transacciones() {
       const respuesta = await fetch(`http://localhost:5000/api/transacciones_completas?id_usuario=${id_usuario}&mes=${mesFiltrado}&anio=${anioFiltrado}`);
       const normales = await respuesta.json();
 
-      console.log("📦 Transacciones normales recibidas:", normales);
-
-      // Mostrar cada transacción con su ID y categoría
-      normales.forEach((t, index) => {
-        console.log(`🔍 Transacción ${index + 1}:`, {
-          descripcion: t.descripcion,
-          categoriaTexto: t.categoria,
-          id_categoria: t.id_categoria
-        });
-      });
-
       const eliminadasDebug = normales.filter(t => !t.visible);
-      console.log("🗑️ Eliminadas recibidas:", eliminadasDebug);
 
       const visibles = normales.filter(t => t.visible);
       visibles.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
@@ -159,16 +166,16 @@ export default function Transacciones() {
 
   useEffect(() => {
     const id_usuario = localStorage.getItem("id_usuario");
+
     if (!id_usuario) return;
-  
+
     fetch(`http://localhost:5000/api/categorias/${id_usuario}`)
       .then(res => res.json())
       .then(data => {
-        console.log("🧾 Categorías cargadas:", data);
         setCategorias(data);
       })
       .catch(err => {
-        console.error("Error al cargar categorías:", err);
+        console.error("❌ Error al cargar categorías:", err);
       });
   }, []);
 
@@ -193,12 +200,7 @@ export default function Transacciones() {
     };
 
     cargarTodo();
-  }, [mesFiltrado, anioFiltrado]);
-
-
-  useEffect(() => {
-    console.log("💬 Eliminadas:", eliminadas);
-  }, [eliminadas]);  
+  }, [mesFiltrado, anioFiltrado]);  
   
 
   useEffect(() => {
@@ -259,6 +261,17 @@ export default function Transacciones() {
     setMenuAbierto(menuAbierto === i ? null : i);
   };
   
+  useEffect(() => {
+    if (!idUsuario) return;
+
+    fetch(`http://localhost:5000/api/categorias?id_usuario=${idUsuario}`)
+      .then(res => res.json())
+      .then(data => {
+        setCategorias(data);
+      })
+      .catch(err => console.error("❌ Error al cargar categorías:", err));
+  }, [idUsuario]);
+
 
   // Cierra el menú si se hace clic fuera
   useEffect(() => {
@@ -271,7 +284,26 @@ export default function Transacciones() {
     return () => document.removeEventListener("click", cerrar);
   }, []);
 
-  
+
+  useEffect(() => {
+    if (modoDictado && pasoDictado < pasosDictado.length) {
+      iniciarDictadoPaso({
+        pasoActual: pasoDictado,
+        pasos: pasosDictado,
+        nuevaTransaccion,
+        setNuevaTransaccion,
+        setPasoActual: setPasoDictado,
+        categorias,
+        metodosMostrar,
+        setUsarSegundoMetodo,
+        setModoDictado,
+        formatearConPuntos,
+        formatearFechaOCR
+      });
+    }
+  }, [pasoDictado]);
+
+
   const getMesActual = () => {
     const hoy = new Date();
     const año = hoy.getFullYear();
@@ -380,11 +412,70 @@ export default function Transacciones() {
     }
   };
 
-  const formatearFechaOCR = (fechaTexto) => {
-    if (!fechaTexto) return "";
-    const [d, m, a] = fechaTexto.replace(/[\/\-.]/g, "-").split("-");
-    const año = a.length === 2 ? `20${a}` : a;
-    return `${año}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+
+  const probarMicrofono = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      alert("🎉 Micrófono detectado y funcionando.");
+      stream.getTracks().forEach(track => track.stop()); // Detiene la grabación de prueba
+    } catch (err) {
+      alert("❌ No se pudo acceder al micrófono. Verifica los permisos en el navegador.");
+      console.error("Error al acceder al micrófono:", err);
+    }
+  };
+
+
+  const testReconocimientoBasico = () => {
+    const r = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    r.lang = "es-CL";
+    r.start();
+
+    r.onresult = (e) => {
+      const texto = e.results[0][0].transcript;
+      console.log("🔊 Se captó:", texto);
+      alert("Se escuchó: " + texto);
+    };
+
+    r.onerror = (e) => {
+      console.error("❌ Error básico:", e.error);
+      alert("Error: " + e.error);
+    };
+  };
+
+
+  const formatearFechaOCR = (texto) => {
+    if (!texto) return "";
+
+    const meses = {
+      enero: "01", febrero: "02", marzo: "03", abril: "04", mayo: "05", junio: "06",
+      julio: "07", agosto: "08", septiembre: "09", octubre: "10", noviembre: "11", diciembre: "12"
+    };
+
+    // Convertir tildes, normalizar y eliminar "del", "de"
+    texto = texto
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // quitar tildes
+      .replace(/\bdel?\b/g, "") // quitar 'de' y 'del'
+      .trim();
+
+    // Detectar patrones como "25 mayo 2025" o "25 5 2025"
+    const partes = texto.split(/\s+/);
+    if (partes.length < 2) return "";
+
+    const dia = partes[0].padStart(2, "0");
+    const mesEntrada = partes[1];
+    const anioEntrada = partes[2] || new Date().getFullYear();
+
+    let mes = "01";
+
+    if (isNaN(mesEntrada)) {
+      mes = meses[mesEntrada] || "01";
+    } else {
+      mes = mesEntrada.padStart(2, "0");
+    }
+
+    return `${anioEntrada}-${mes}-${dia}`;
   };
 
 
@@ -501,7 +592,7 @@ export default function Transacciones() {
       setNuevaTransaccion({
         fecha: "",
         monto: "",
-        categoria: "",
+        id_categoria: "",
         descripcion: "",
         imagen: null,
         tipoPago: "efectivo",
@@ -538,10 +629,11 @@ export default function Transacciones() {
     const origen = nuevaTransaccion;
     const esEdicion = editIndex !== null;
 
-    const camposObligatorios = ["fecha", "monto", "categoria", "descripcion", "tipoPago"];
+    const camposObligatorios = ["fecha", "monto", "id_categoria", "descripcion", "tipoPago", "tipo"];
     const faltantes = camposObligatorios.filter((campo) => !origen[campo]);
     if (faltantes.length > 0) {
       alert("Por favor completa todos los campos obligatorios.");
+      console.warn("Campos faltantes:", faltantes);
       return;
     }
 
@@ -578,7 +670,9 @@ export default function Transacciones() {
       ? parseFloat(origen.monto.replace(/\./g, "").replace(",", "."))
       : parseFloat(origen.monto);
 
-    if (usarSegundoMetodo || usarSegundoMetodoEditar) {
+    const usar2 = usarSegundoMetodo || usarSegundoMetodoEditar;
+
+    if (usar2) {
       const monto1 = origen.monto;
       const monto2 = origen.monto2 || "0";
 
@@ -595,14 +689,14 @@ export default function Transacciones() {
 
     const transaccionAEnviar = {
       id_usuario,
-      tipo,
+      tipo: origen.tipo,
       fecha: origen.fecha,
       monto: montoNumerico,
       id_categoria: origen.id_categoria,
       descripcion: origen.descripcion,
       tipoPago: origen.tipoPago,
-      tipoPago2: usarSegundoMetodo || usarSegundoMetodoEditar ? origen.tipoPago2 : null,
-      monto2: usarSegundoMetodo || usarSegundoMetodoEditar
+      tipoPago2: usar2 ? origen.tipoPago2 : null,
+      monto2: usar2
         ? parseFloat((origen.monto2 || "0").toString().replace(/\./g, "").replace(",", "."))
         : null,
       cuotas: parseInt(origen.cuotas || 1),
@@ -613,10 +707,11 @@ export default function Transacciones() {
       nombre_archivo: origen.imagen?.name || null
     };
 
+    console.log("📤 Transacción a enviar:", transaccionAEnviar);
+
     try {
       if (esEdicion) {
         const id_transaccion = editIndex;
-
         await fetch(`http://localhost:5000/api/transacciones/${id_transaccion}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -629,34 +724,39 @@ export default function Transacciones() {
             : t
         );
         setTransacciones(nuevasTransacciones);
-
       } else {
+        // Limpia campos opcionales vacíos
+        if (!transaccionAEnviar.tipoPago2) delete transaccionAEnviar.tipoPago2;
+        if (!transaccionAEnviar.monto2) delete transaccionAEnviar.monto2;
+        if (!transaccionAEnviar.imagen) delete transaccionAEnviar.imagen;
+        console.log("📤 Transacción a enviar:", transaccionAEnviar);
+
         await fetch(`http://localhost:5000/api/transacciones`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(transaccionAEnviar)
         });
 
-        await cargarTodasTransacciones(); // vuelve a cargar normales + programados
+        await cargarTodasTransacciones();
       }
 
-      // 🧹 Limpiar y cerrar modal
       setEditIndex(null);
       setNuevaTransaccion({
         fecha: "",
         monto: "",
-        categoria: "",
+        id_categoria: "",
         descripcion: "",
         imagen: null,
         tipoPago: "efectivo",
         cuotas: "1",
         interes: "0",
         totalCredito: "",
-        valorCuota: ""
+        valorCuota: "",
+        tipo: tipo
       });
 
       if (fileInputRef.current) fileInputRef.current.value = "";
-      setMostrarFormulario(false); // ✅ cerrar modal
+      setMostrarFormulario(false);
 
     } catch (error) {
       console.error("Error al guardar transacción:", error);
@@ -884,8 +984,6 @@ export default function Transacciones() {
     return coincideMes && coincideAnio;
   });
 
-  console.log("🧪 eliminadasFiltradas:", eliminadasFiltradas);
-
 
   return (
     <div className="page-layout">
@@ -974,7 +1072,11 @@ export default function Transacciones() {
           className="btn-guardar"
           onClick={() => {
             setTipo("gasto");
-            setMostrarFormulario(true);
+            setNuevaTransaccion(prev => ({
+            ...prev,
+            tipo: tipo  // asegura que tipo ya esté seteado en nuevaTransaccion
+          }));
+          setMostrarFormulario(true);
           }}
         >
           Agregar nueva transacción
@@ -1073,18 +1175,63 @@ export default function Transacciones() {
                 <div className="botones-tipo-transaccion" style={{ gridColumn: "1 / 4", display: "flex", gap: "1rem", marginBottom: "1rem" }}>
                   <button
                     className={`btn-tipo ${tipo === "ingreso" ? "activo ingreso" : ""}`}
-                    onClick={() => setTipo("ingreso")}
-                    type="button"
+                    onClick={() => {
+                      setTipo("ingreso");
+                      setNuevaTransaccion(prev => ({ ...prev, tipo: "ingreso" }));
+                    }}
                   >
                     Ingreso
                   </button>
                   <button
                     className={`btn-tipo ${tipo === "gasto" ? "activo gasto" : ""}`}
-                    onClick={() => setTipo("gasto")}
-                    type="button"
+                    onClick={() => {
+                      setTipo("gasto");
+                      setNuevaTransaccion(prev => ({ ...prev, tipo: "gasto" }));
+                    }}
                   >
                     Gasto
                   </button>
+                </div>
+
+                <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
+                  <button
+                    className="btn-guardar"
+                    onClick={() => {
+                      setModoDictado(true);
+                      setPasoDictado(0);
+                      iniciarDictadoPaso({
+                        pasoActual: 0,
+                        pasos: pasosDictado,
+                        nuevaTransaccion,
+                        setNuevaTransaccion,
+                        setPasoActual: setPasoDictado,
+                        categorias,
+                        metodosMostrar,
+                        setUsarSegundoMetodo,
+                        formatearConPuntos,
+                        formatearFechaOCR
+                      });
+                    }}
+                  >
+                    🎤 Iniciar dictado por voz
+                  </button>
+
+                  <button
+                    className="btn-guardar"
+                    style={{ backgroundColor: "#10b981" }}
+                    onClick={probarMicrofono}
+                  >
+                    🎙️ Probar micrófono
+                  </button>
+
+                  <button
+                    className="btn-guardar"
+                    style={{ backgroundColor: "#8b5cf6" }}
+                    onClick={testReconocimientoBasico}
+                  >
+                    🧪 Test dictado básico
+                  </button>
+
                 </div>
                 
                 {/* Comprobante */}
@@ -1134,7 +1281,13 @@ export default function Transacciones() {
                 {/* Fecha y Categoría */}
                 <div className="campo-fecha">
                   <label>Fecha:</label>
-                  <input type="date" name="fecha" value={nuevaTransaccion.fecha} onChange={handleChange} />
+                  <input
+                    type="date"
+                    name="fecha"
+                    value={nuevaTransaccion.fecha}
+                    onChange={handleChange}
+                    className={modoDictado && pasosDictado[pasoDictado] === "fecha" ? "campo-activo-dictado" : ""}
+                  />
                 </div>
 
                 <div className="campo-categoria">
@@ -1157,6 +1310,21 @@ export default function Transacciones() {
                         </option>
                       ))}
                   </select>
+                  {modoDictado && pasosDictado[pasoDictado] === "id_categoria" && (
+                    <div className="ayuda-dictado-categorias">
+                      <p>📢 Puedes decir una de estas opciones:</p>
+                      <ul>
+                        {categorias
+                          .filter(c => {
+                            const tipoCategoria = c.tipo?.toLowerCase();
+                            return tipoCategoria === tipo || tipoCategoria === "ambos";
+                          })
+                          .map((c) => (
+                            <li key={c.id_categoria}>{c.nombre}</li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 {/* Descripción (ocupa toda la fila) */}
@@ -1167,6 +1335,7 @@ export default function Transacciones() {
                     name="descripcion"
                     value={nuevaTransaccion.descripcion}
                     onChange={handleChange}
+                    className={modoDictado && pasosDictado[pasoDictado] === "descripcion" ? "campo-activo-dictado" : ""}
                   />
                 </div>
 
@@ -1193,6 +1362,15 @@ export default function Transacciones() {
                       cursor: "pointer"
                     }}
                   />
+                  {modoDictado && pasosDictado[pasoDictado] === "usarSegundoMetodo" && (
+                    <div className="ayuda-dictado-categorias">
+                      <p>📢 Puedes decir:</p>
+                      <ul>
+                        <li>“Sí” — para usar dos métodos de pago</li>
+                        <li>“No” — para usar solo uno y terminar el dictado</li>
+                      </ul>
+                    </div>
+                  )}
                   <label htmlFor="checkbox-doble-pago" style={{ cursor: "pointer", fontSize: "0.95rem" }}>
                     ¿Pagar con dos métodos?
                   </label>
@@ -1201,12 +1379,27 @@ export default function Transacciones() {
                 <div className="fila-metodos-pago">
                   <div className="campo-tipopago">
                     <label>Tipo de pago</label>
-                    <select name="tipoPago" value={nuevaTransaccion.tipoPago} onChange={handleChange}>
+                    <select
+                      name="tipoPago"
+                      value={nuevaTransaccion.tipoPago}
+                      onChange={handleChange}
+                      className={modoDictado && pasosDictado[pasoDictado] === "tipoPago" ? "campo-activo-dictado" : ""}
+                    >
                       <option value="">Selecciona</option>
                       {metodosMostrar.map((m) => (
                         <option key={m.valor} value={m.valor}>{m.label}</option>
                       ))}
                     </select>
+                    {modoDictado && pasosDictado[pasoDictado] === "tipoPago" && (
+                      <div className="ayuda-dictado-categorias">
+                        <p>📢 Puedes decir uno de estos métodos de pago:</p>
+                        <ul>
+                          {metodosMostrar.map((m) => (
+                            <li key={m.valor}>{m.label}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   <div className="campo-monto">
@@ -1216,6 +1409,7 @@ export default function Transacciones() {
                       name="monto"
                       value={nuevaTransaccion.monto}
                       onChange={handleChange}
+                      className={modoDictado && pasosDictado[pasoDictado] === "monto" ? "campo-activo-dictado" : ""}
                     />
                   </div>
 
@@ -1223,12 +1417,27 @@ export default function Transacciones() {
                     <>
                       <div className="campo-tipopago">
                         <label>Segundo tipo de pago</label>
-                        <select name="tipoPago2" value={nuevaTransaccion.tipoPago2} onChange={handleChange}>
+                        <select
+                          name="tipoPago2"
+                          value={nuevaTransaccion.tipoPago2}
+                          onChange={handleChange}
+                          className={modoDictado && pasosDictado[pasoDictado] === "tipoPago2" ? "campo-activo-dictado" : ""}
+                        >
                           <option value="">Selecciona</option>
                           {metodosMostrar.map((m) => (
                             <option key={m.valor} value={m.valor}>{m.label}</option>
                           ))}
                         </select>
+                        {modoDictado && pasosDictado[pasoDictado] === "tipoPago2" && (
+                          <div className="ayuda-dictado-categorias">
+                            <p>📢 Puedes decir uno de estos métodos de pago:</p>
+                            <ul>
+                              {metodosMostrar.map((m) => (
+                                <li key={m.valor}>{m.label}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
 
                       <div className="campo-monto">
@@ -1238,6 +1447,7 @@ export default function Transacciones() {
                           name="monto2"
                           value={nuevaTransaccion.monto2}
                           onChange={handleChange}
+                          className={modoDictado && pasosDictado[pasoDictado] === "monto2" ? "campo-activo-dictado" : ""}
                         />
                       </div>
                     </>
@@ -1298,13 +1508,20 @@ export default function Transacciones() {
                 <button
                   className="btn-cancelar"
                   onClick={() => {
-                    limpiarFormulario();
-                    setMostrarFormulario(false);
+                    limpiarFormulario();            // Limpia campos
+                    setPasoDictado(0);              // Reinicia pasos del dictado
+                    setModoDictado(false);          // Sale del modo dictado
+                    setMostrarFormulario(false);    // Cierra el formulario
                   }}
                 >
                   Cancelar
                 </button>
               </div>
+                {dictadoFinalizado && (
+                  <div className="mensaje-final-dictado">
+                    ✅ Dictado finalizado. Revisa los campos y haz clic en <strong>Guardar</strong>.
+                  </div>
+                )}
 
                 {/* Previsualización de datos OCR */}
                 {previaOCR && (
@@ -1352,7 +1569,12 @@ export default function Transacciones() {
               <div className="texto-eliminada">
                 <p><strong>{t.tipo.toUpperCase()}</strong> | {formatearFechaBonita(t.fecha)}</p>
                 <p><strong>Monto:</strong> ${Number(t.monto).toLocaleString("es-CL")}</p>
-                <p><strong>Categoría:</strong> {t.categoria}</p>
+                <p><strong>Categoría:</strong> {
+                  (() => {
+                    const cat = categorias.find(c => Number(c.id_categoria) === Number(t.id_categoria));
+                    return cat ? cat.nombre : "Sin categoría";
+                  })()
+                }</p>
                 <p><strong>Descripción:</strong> {t.descripcion}</p>
                 <p><strong>Tipo de pago:</strong> {t.tipoPago}</p>
                   {t.imagen && (
@@ -1407,10 +1629,24 @@ export default function Transacciones() {
               </div>
               <div>
                 <label>Categoría:</label>
-                <select name="categoria" value={nuevaTransaccion.categoria} onChange={handleModalChange}>
-                  {categorias.map((c, i) => (
-                    <option key={i} value={c.nombre}>{c.nombre}</option>
-                  ))}
+                <select
+                  name="id_categoria"
+                  value={nuevaTransaccion.id_categoria || ""}
+                  onChange={handleModalChange}
+                >
+                  <option value="">Selecciona una categoría</option>
+                  {categorias
+                    .filter(c => {
+                      if (!c.tipo) return false;
+                      const tipoCategoria = c.tipo.toLowerCase();
+                      const tipoTransaccion = nuevaTransaccion.tipo?.toLowerCase();
+                      return tipoCategoria === tipoTransaccion || tipoCategoria === "ambos";
+                    })
+                    .map(c => (
+                      <option key={c.id_categoria} value={c.id_categoria}>
+                        {c.nombre}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>
@@ -1510,7 +1746,16 @@ export default function Transacciones() {
 
             <div className="acciones-transaccion">
               <button className="btn-guardar" onClick={actualizarTransaccion}>Guardar cambios</button>
-              <button className="btn-cancelar" onClick={() => setShowModalEditar(false)}>Cancelar</button>
+              <button
+                className="btn-cancelar"
+                onClick={() => {
+                  limpiarFormulario();              // limpia
+                  setEditIndex(null);               // limpia índice
+                  setShowModalEditar(false);        // cierra
+                }}
+              >
+                Cancelar
+              </button>
             </div>
           </div>
           
