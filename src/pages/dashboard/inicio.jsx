@@ -11,8 +11,6 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import Header from "../../components/header/header";
-import Footer from "../../components/footer/footer";
 import axios from "axios";
 import { useNavigate } from "react-router-dom"; 
 
@@ -28,6 +26,7 @@ ChartJS.register(
 
 export default function DashboardFinanciero() {
   const navigate = useNavigate();
+  const [gastosProgramados, setGastosProgramados] = useState([]);
   const [salario, setSalario] = useState(0);
   const [ahorros, setAhorros] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -54,13 +53,6 @@ export default function DashboardFinanciero() {
   const [loading, setLoading] = useState(true);
   const [metas, setMetas] = useState([]);
   const [fechaAhorro, setFechaAhorro] = useState("");
-  const [showChatBot, setShowChatBot] = useState(false);
-  const [mensajeIA, setMensajeIA] = useState("");
-  const [mensajesIA, setMensajesIA] = useState([
-    { role: "assistant", content: "Hola 👋 Soy tu asistente financiero. ¿En qué puedo ayudarte hoy?" }
-  ]);
-  const [cargandoIA, setCargandoIA] = useState(false);
-  const [chatMensajes, setChatMensajes] = useState([]);
   const [nombreUsuario, setNombreUsuario] = useState("");
   const fechaActual = new Date();
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1); // de 1 a 12
@@ -74,7 +66,26 @@ export default function DashboardFinanciero() {
   const [pestanaActiva, setPestanaActiva] = useState("resumen");
   const idUsuario = localStorage.getItem("id_usuario");
   const [categorias, setCategorias] = useState([]);
+  const [alertasRecurrentes, setAlertasRecurrentes] = useState([]);
+  const [alertasComparativas, setAlertasComparativas] = useState([]);
+  const [comparacion, setComparacion] = useState([]);
 
+  const now = new Date();
+  const [mes1, setMes1] = useState(now.getMonth() === 0 ? 12 : now.getMonth());
+  const [anio1, setAnio1] = useState(now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear());
+  const [mes2, setMes2] = useState(now.getMonth() + 1);
+  const [anio2, setAnio2] = useState(now.getFullYear());
+
+  
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+
+    fetch(`http://localhost:5000/api/estadisticas/comparar_categorias?id_usuario=${id_usuario}&mes1=${mes1}&anio1=${anio1}&mes2=${mes2}&anio2=${anio2}`)
+      .then(res => res.json())
+      .then(data => setComparacion(data))
+      .catch(err => console.error("Error al comparar categorías:", err));
+  }, [mes1, anio1, mes2, anio2]);
 
   
   useEffect(() => {
@@ -102,7 +113,6 @@ export default function DashboardFinanciero() {
       fetch(`http://localhost:5000/api/detalles_usuario?id_usuario=${id_usuario}`)
         .then((res) => res.json())
         .then((data) => {
-          console.log("Detalles usuario:", data);
           if (data.salario !== undefined) setSalario(data.salario);
           if (data.dia_facturacion !== undefined) setDiaFacturacion(data.dia_facturacion);
           setLoading(false);
@@ -125,9 +135,7 @@ export default function DashboardFinanciero() {
 
   useEffect(() => {
     const idUsuario = localStorage.getItem("id_usuario");
-  
-    console.log("🧠 Cargando dashboard con id_usuario:", idUsuario);
-  
+    
     if (!idUsuario || idUsuario === "null" || idUsuario === "undefined") {
       navigate("/");  // solo redirige si está mal
     }
@@ -333,6 +341,111 @@ export default function DashboardFinanciero() {
     setAhorros(totalAhorros);
   }, [totalAhorros]);
   
+
+  useEffect(() => {
+    const hoy = new Date();
+    const alertas = [];
+
+    gastosMensuales.forEach((g) => {
+      const diaCobro = Number(g.dia_pago);
+      const fechaCobro = new Date(hoy.getFullYear(), hoy.getMonth(), diaCobro);
+      const diffDias = (fechaCobro - hoy) / (1000 * 60 * 60 * 24);
+
+      if (diffDias >= 0 && diffDias <= 3) {
+        alertas.push(`⚠️ Tienes un gasto mensual (“${g.nombre}”) programado para el día ${diaCobro}.`);
+      }
+    });
+
+    // Repite para pagos programados
+    gastosProgramados.forEach((g) => {
+      const fechaPago = new Date(g.fecha_pago);
+      const diffDias = (fechaPago - hoy) / (1000 * 60 * 60 * 24);
+
+      if (diffDias >= 0 && diffDias <= 3) {
+        alertas.push(`⚠️ Tienes un pago programado (“${g.descripcion}”) para el ${fechaPago.toLocaleDateString("es-CL")}.`);
+      }
+    });
+
+    setAlertasRecurrentes(alertas);
+  }, [gastosMensuales, gastosProgramados]);
+
+
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario) return;
+
+    // 🔁 GASTOS MENSUALES
+    fetch(`http://localhost:5000/api/gastos_mensuales?id_usuario=${id_usuario}`)
+      .then(res => res.json())
+      .then(data => setGastosMensuales(data))
+      .catch(err => console.error("Error al cargar gastos mensuales:", err));
+
+    // 🔂 GASTOS PROGRAMADOS
+    fetch(`http://localhost:5000/api/pagos_programados/${id_usuario}`)
+      .then(res => res.json())
+      .then(data => setGastosProgramados(data))
+      .catch(err => console.error("Error al cargar gastos programados:", err));
+  }, []);
+
+  useEffect(() => {
+    const id_usuario = localStorage.getItem("id_usuario");
+    if (!id_usuario || !transacciones.length || !categorias.length) return;
+
+    const alertas = [];
+
+    categorias.forEach(async (cat) => {
+      if (cat.tipo !== "Gasto" && cat.tipo !== "Ambos") return;
+
+      const gastoActual = transacciones
+        .filter(t =>
+          t.tipo === "gasto" &&
+          t.visible !== false &&
+          Number(t.id_categoria) === Number(cat.id_categoria)
+        )
+        .reduce((acc, t) => acc + Number(t.monto), 0);
+
+      const res = await fetch(`http://localhost:5000/api/promedios/promedio_categoria?id_usuario=${id_usuario}&id_categoria=${cat.id_categoria}`);
+      const data = await res.json();
+      const promedio = data.promedio;
+
+      if (promedio > 0 && gastoActual > promedio * 1.3) {
+        const exceso = Math.round(((gastoActual - promedio) / promedio) * 100);
+        alertas.push(`⚠️ Este mes llevas un ${exceso}% más en “${cat.nombre}” que tu promedio mensual.`);
+      }
+
+      setAlertasComparativas(alertas); // importante: actualizar dentro del ciclo
+    });
+  }, [transacciones, categorias]);
+
+
+  useEffect(() => {
+    const hoy = new Date();
+    const alertas = [];
+
+    // 🔁 GASTOS MENSUALES
+    gastosMensuales.forEach(g => {
+      const diaCobro = Number(g.dia_pago);
+      const fechaCobro = new Date(hoy.getFullYear(), hoy.getMonth(), diaCobro);
+      const diffDias = (fechaCobro - hoy) / (1000 * 60 * 60 * 24);
+
+      if (diffDias >= 0 && diffDias <= 3) {
+        alertas.push(`📅 El gasto mensual “${g.nombre}” se cobrará el día ${diaCobro} de este mes.`);
+      }
+    });
+
+    // 🔂 GASTOS PROGRAMADOS
+    gastosProgramados.forEach(g => {
+      const fecha = new Date(g.fecha_transaccion);
+      const diffDias = (fecha - hoy) / (1000 * 60 * 60 * 24);
+
+      if (diffDias >= 0 && diffDias <= 3) {
+        alertas.push(`📌 El gasto programado “${g.descripcion}” se cobrará el ${fecha.toLocaleDateString("es-CL")}.`);
+      }
+    });
+
+    setAlertasRecurrentes(alertas);
+  }, [gastosMensuales, gastosProgramados]);
+
 
   const handleActualizarNombre = () => {
     const id_usuario = localStorage.getItem("id_usuario");
@@ -628,8 +741,6 @@ export default function DashboardFinanciero() {
 
   return (
   <div className="page-layout">
-    <Header />
-
     <div className="dashboard-container">
       {/* PESTAÑAS */}
       <div className="tabs">
@@ -651,6 +762,12 @@ export default function DashboardFinanciero() {
         >
           Análisis Mensual
         </button>
+          <button
+            className={pestanaActiva === "alertas" ? "tab active" : "tab"}
+            onClick={() => setPestanaActiva("alertas")}
+          >
+            Alertas & Comparación
+          </button>
       </div>
 
       {/* CONTENIDO SEGÚN PESTAÑA */}
@@ -760,7 +877,7 @@ export default function DashboardFinanciero() {
               <div className="info-box">
                 {/* CONTROL DE LÍMITES POR CATEGORÍA */}
                 <div className="dashboard-card limites-categorias">
-                  <h3>Control de límites por categoría (mes actual)</h3>
+                  <h3>Control de gastos por categoría (mes actual)</h3>
                   <table className="tabla-limites">
                     <thead>
                       <tr>
@@ -772,12 +889,9 @@ export default function DashboardFinanciero() {
                     </thead>
                     <tbody>
                       {[...categorias]
+                        .filter(cat => cat.tipo === "Gasto" || cat.tipo === "Ambos") // solo categorías de gasto o ambas
                         .sort((a, b) => {
-                          const orden = {
-                            "General": 0,
-                            "Gasto Mensual": 1,
-                            "Gasto Programado": 2
-                          };
+                          const orden = { "General": 0 };
                           const ordenA = orden[a.nombre] ?? 99;
                           const ordenB = orden[b.nombre] ?? 99;
                           return ordenA - ordenB || a.nombre.localeCompare(b.nombre);
@@ -810,7 +924,7 @@ export default function DashboardFinanciero() {
                               </td>
                             </tr>
                           );
-                      })}
+                        })}
                     </tbody>
                   </table>
                 </div>
@@ -834,6 +948,76 @@ export default function DashboardFinanciero() {
                 </div>
               )}
 
+          </div>
+        )}
+
+        {pestanaActiva === "alertas" && (
+          <div className="dashboard-alertas">
+            <h2 className="titulo">Alertas y Comparación</h2>
+
+            {alertasRecurrentes.length > 0 && (
+              <div className="alertas-recurrentes">
+                {alertasRecurrentes.map((msg, i) => (
+                  <div key={i} className="alerta-aviso">{msg}</div>
+                ))}
+              </div>
+            )}
+
+            {alertasComparativas.length > 0 && (
+              <div className="alertas-recurrentes">
+                {alertasComparativas.map((msg, i) => (
+                  <div key={i} className="alerta-aviso">{msg}</div>
+                ))}
+              </div>
+            )}
+
+            {/* Comparador de Categorías entre Meses */}
+            <div className="comparador-categorias">
+              <h3 className="subtitulo">Comparador de categorías entre meses</h3>
+
+              <div className="selectores-comparacion">
+                <label>Mes 1:</label>
+                <input type="number" value={mes1} onChange={(e) => setMes1(Number(e.target.value))} min="1" max="12" />
+                <input type="number" value={anio1} onChange={(e) => setAnio1(Number(e.target.value))} />
+
+                <label>Mes 2:</label>
+                <input type="number" value={mes2} onChange={(e) => setMes2(Number(e.target.value))} min="1" max="12" />
+                <input type="number" value={anio2} onChange={(e) => setAnio2(Number(e.target.value))} />
+              </div>
+
+              <table className="tabla-comparacion">
+                <thead>
+                  <tr>
+                    <th>Categoría</th>
+                    <th>{`Mes ${mes1}/${anio1}`}</th>
+                    <th>{`Mes ${mes2}/${anio2}`}</th>
+                    <th>Cambio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparacion.map((item, i) => {
+                    const categoria = categorias.find(c => Number(c.id_categoria) === Number(item.id_categoria));
+                    const nombre = categoria ? categoria.nombre : "Sin nombre";
+
+                    const cambio = item.cambio;
+                    const porcentaje = item.porcentaje;
+                    const flecha = cambio > 0 ? "↑" : (cambio < 0 ? "↓" : "–");
+                    const color = cambio > 0 ? "red" : (cambio < 0 ? "green" : "inherit");
+
+                    return (
+                      <tr key={i}>
+                        <td>{nombre}</td>
+                        <td>${item.monto_mes1.toLocaleString("es-CL")}</td>
+                        <td>${item.monto_mes2.toLocaleString("es-CL")}</td>
+                        <td style={{ color }}>
+                          {flecha} {porcentaje !== null ? `${Math.abs(porcentaje).toFixed(1)}%` : "N/A"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -1125,10 +1309,6 @@ export default function DashboardFinanciero() {
 
       </div>
     </div>
-
-
-
-    <Footer />
   </div>
 );
 }

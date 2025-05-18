@@ -1,6 +1,4 @@
 import "./ver_categorias.css";
-import Header from "../../components/header/header";
-import Footer from "../../components/footer/footer";
 import React, { useState, useEffect } from "react";
 
 const Categorias = () => {
@@ -165,7 +163,6 @@ const Categorias = () => {
 
   return (
     <div className="page-layout">
-      <Header />
       <div className="categorias-container">
         <div className="contenido">
           <h2 className="titulo-categorias">Gestión de Categorías</h2>
@@ -283,7 +280,6 @@ const Categorias = () => {
         </div>
       </div>
     )}
-      <Footer />
     </div>
   );
 };

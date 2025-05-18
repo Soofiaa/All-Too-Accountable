@@ -1,6 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import Header from "../../components/header/header";
-import Footer from "../../components/footer/footer";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -9,7 +7,7 @@ import {
   inicializarReconocimiento,
   iniciarDictadoPaso,
   pasosDictado
-} from "../../utils/dictado/dictado_transaccion";
+} from "../../utils/dictado_transaccion";
 
 
 const MESES_NOMBRES = [
@@ -987,7 +985,6 @@ export default function Transacciones() {
 
   return (
     <div className="page-layout">
-      <Header />
       <main className="transacciones-container">
         <h1 className="titulo-transacciones">Gestión de Transacciones</h1>
 
@@ -1813,8 +1810,7 @@ export default function Transacciones() {
           </div>
         )}
 
-              </main>
-        <Footer />
+        </main>
       </div>
   );
 }

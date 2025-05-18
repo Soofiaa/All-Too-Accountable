@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import "./metas.css";
-import Footer from "../../components/footer/footer";
-import Header from "../../components/header/header";
 
 const idUsuario = localStorage.getItem("id_usuario");
 const API_URL = "http://localhost:5000/api/metas";
@@ -135,7 +133,6 @@ export default function MetasAhorro() {
 
   return (
     <div className="page-layout">
-      <Header />
       <div className="metas-ahorro-container">
         <div className="contenido">
           <h2 className="titulo">Gestión de metas de ahorro</h2>
@@ -225,7 +222,6 @@ export default function MetasAhorro() {
         </div>
       </div>
     )}
-      <Footer />
     </div>
   );
 }

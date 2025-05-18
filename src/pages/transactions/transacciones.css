@@ -153,16 +153,6 @@ select {
   min-height: 100vh;
 }
 
-footer {
-  margin-top: auto;
-  width: 100%;
-  background-color: #f9fafb;
-  padding: 1rem;
-  text-align: center;
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
 .resumen-transaccion.solo-texto .info-columna {
   display: flex;
   flex-direction: column;

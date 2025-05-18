@@ -9,21 +9,25 @@ import Categorias from "./pages/ver-categorias/ver_categorias";
 import MetasAhorro from "./pages/metas-ahorro/metas";
 import RestablecerContrasena from "./pages/recuperar_pw/recuperar_contrasena";
 import PagosRecurrentes from "./pages/gastos-recurrentes/gastos_recurrentes";
-
+import AppLayout from "./layouts/AppLayout";
 
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/inicio" element={<DashboardPage />} />
         <Route path="/olvide_password" element={<ForgotPasswordPage />} />
         <Route path="/registrarse" element={<RegisterPage />} />
-        <Route path="/transacciones" element={<TransaccionesPage />} />
-        <Route path="/ver-categorias" element={<Categorias />} />
-        <Route path="/metas-ahorro" element={<MetasAhorro />} />
         <Route path="/restablecer_contrasena" element={<RestablecerContrasena />} />
-        <Route path="pagos-recurrentes" element={<PagosRecurrentes />} />
+        
+        {/* Rutas protegidas dentro del layout con header y cuaderno */}
+        <Route element={<AppLayout />}>
+          <Route path="/inicio" element={<DashboardPage />} />
+          <Route path="/transacciones" element={<TransaccionesPage />} />
+          <Route path="/ver-categorias" element={<Categorias />} />
+          <Route path="/metas-ahorro" element={<MetasAhorro />} />
+          <Route path="/pagos-recurrentes" element={<PagosRecurrentes />} />
+        </Route>
       </Routes>
     </Router>
   );

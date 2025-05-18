@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Header from "../../components/header/header";
-import Footer from "../../components/footer/footer";
 import "./gastos_recurrentes.css";
 
 
@@ -334,7 +332,6 @@ const PagosRecurrentes = () => {
 
   return (
     <div className="page-layout">
-      <Header />
       <div className="categorias-container">
         <div className="contenido">
           <h2 className="titulo-categorias">Gestión de Pagos Recurrentes</h2>
@@ -614,7 +611,6 @@ const PagosRecurrentes = () => {
 
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

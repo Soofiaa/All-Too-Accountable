@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./header.css";
+import { BookOpen } from "lucide-react";
 
-export default function Header() {
+export default function Header({ setShowCuaderno }) {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -31,6 +32,9 @@ export default function Header() {
           <button className="nav-button" onClick={() => navigate("/ver-categorias")}>Categorias</button>
           <button className="nav-button" onClick={() => navigate("/pagos-recurrentes")}>Gastos recurrentes</button>
           <button className="nav-button" onClick={() => navigate("/metas-ahorro")}>Metas de ahorro</button>
+          <button className="btn-ayuda" onClick={() => setShowCuaderno(true)} title="Cuaderno de ayuda">
+            <BookOpen size={24} strokeWidth={2.5} />
+          </button>
           <button className="nav-button logout-button" onClick={handleLogout}>
             Cerrar sesión
           </button>

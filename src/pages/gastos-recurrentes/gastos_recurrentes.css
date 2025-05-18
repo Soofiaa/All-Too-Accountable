@@ -4,10 +4,6 @@
   min-height: 100vh;
 }
 
-.page-layout > footer {
-  margin-top: auto;
-}
-
 .contenido {
   max-width: 1000px;
   padding: 1rem;
