@@ -161,3 +161,13 @@
   background-color: #e5e7eb;
   color: #1e3a8a;
 }
+
+.fila-categoria {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fila-oculta {
+  opacity: 0;
+  transform: translateX(-20px);
+  pointer-events: none;
+}

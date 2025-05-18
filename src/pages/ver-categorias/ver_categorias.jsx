@@ -9,7 +9,7 @@ const Categorias = () => {
   const [categoriaEditando, setCategoriaEditando] = useState(null);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [categoriaAEliminar, setCategoriaAEliminar] = useState(null);
-
+  const [filaOcultando, setFilaOcultando] = useState(null);
 
   if (!idUsuario) {
     alert("No se encontró el ID del usuario. Por favor, inicia sesión.");
@@ -33,27 +33,42 @@ const Categorias = () => {
 
 
   const handleEliminar = (index) => {
-    setCategoriaAEliminar(index);
-    setMostrarConfirmacion(true);
-  };  
-  
-  const confirmarEliminar = async () => {
-    const id = categorias[categoriaAEliminar].id;
-  
-    await fetch(`http://localhost:5000/api/categorias/${id}`, {
-      method: "DELETE",
-    });
-  
-    // Elimina localmente sin alterar el orden
-    const nuevas = [...categorias];
-    nuevas.splice(categoriaAEliminar, 1);
-    setCategorias(nuevas);
-  
-    setMostrarConfirmacion(false);
-    setCategoriaAEliminar(null);
-  };  
-  
+      setCategoriaAEliminar(index);
+      setMostrarConfirmacion(true);
+    };  
+    
+    const confirmarEliminar = async () => {
+      const categoria = categorias[categoriaAEliminar];
+      const id = categoria.id_categoria;
 
+      setFilaOcultando(id); // activa clase de ocultar
+
+      setTimeout(async () => {
+        try {
+          const respuesta = await fetch(`http://localhost:5000/api/categorias/${id}`, {
+            method: "DELETE",
+          });
+
+          if (!respuesta.ok) {
+            const data = await respuesta.json();
+            alert(data.error || "No se pudo eliminar la categoría.");
+            setFilaOcultando(null);
+            return;
+          }
+
+          const nuevas = categorias.filter(c => c.id_categoria !== id);
+          setCategorias(nuevas);
+        } catch (error) {
+          console.error("Error eliminando categoría:", error);
+          alert("Error de red al eliminar.");
+        }
+
+        setMostrarConfirmacion(false);
+        setCategoriaAEliminar(null);
+        setFilaOcultando(null);
+      }, 500); // tiempo igual al CSS (0.5s)
+    };
+  
   const cancelarEliminar = () => {
     setMostrarConfirmacion(false);
     setCategoriaAEliminar(null);
@@ -183,7 +198,10 @@ const Categorias = () => {
             </thead>
             <tbody>
               {categorias.map((categoria, idx) => (
-                <tr key={idx} className="item-categoria">
+                <tr
+                  key={idx}
+                  className={`item-categoria fila-categoria ${filaOcultando === categoria.id_categoria ? "fila-oculta" : ""}`}
+                >
                   <td>{categoria.nombre}</td>
                   <td>{categoria.tipo}</td>
                   <td>

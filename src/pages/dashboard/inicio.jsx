@@ -69,7 +69,7 @@ export default function DashboardFinanciero() {
   const [alertasRecurrentes, setAlertasRecurrentes] = useState([]);
   const [alertasComparativas, setAlertasComparativas] = useState([]);
   const [comparacion, setComparacion] = useState([]);
-
+  const [visible, setVisible] = useState(true);
   const now = new Date();
   const [mes1, setMes1] = useState(now.getMonth() === 0 ? 12 : now.getMonth());
   const [anio1, setAnio1] = useState(now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear());
@@ -462,7 +462,7 @@ export default function DashboardFinanciero() {
         setNuevoNombreUsuario("");
       })
       .catch(err => {
-        console.error("❌ Error al actualizar nombre:", err);
+        console.error("Error al actualizar nombre:", err);
         alert("No se pudo actualizar el nombre.");
       });
     } else {
@@ -616,7 +616,7 @@ export default function DashboardFinanciero() {
   
     // Solo intentamos depositar si es día 1
     if (diaHoy !== 1) {
-      console.log("⏳ Hoy no es día de depósito automático (solo el día 1)");
+      console.log("Hoy no es día de depósito automático (solo el día 1)");
       return;
     }
   
@@ -654,7 +654,7 @@ export default function DashboardFinanciero() {
       })
       .then(res => res.json())
       .then(() => {
-        console.log("💸 Salario depositado automáticamente.");
+        console.log("Salario depositado automáticamente.");
         // 🚨 AQUÍ HACEMOS ESTO:
         // Volvemos a pedir transacciones actualizadas
         fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
@@ -666,7 +666,7 @@ export default function DashboardFinanciero() {
       })
       .catch(error => console.error("Error al depositar salario:", error));
     } else {
-      console.log("✅ El salario de este mes ya fue depositado.");
+      console.log("El salario de este mes ya fue depositado.");
     }
   };  
 
@@ -716,13 +716,13 @@ export default function DashboardFinanciero() {
         })
         .then(res => res.json())
         .then(() => {
-          console.log("✅ Saldo restante del mes anterior registrado.");
+          console.log("Saldo restante del mes anterior registrado.");
           // refrescar transacciones
           fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
             .then(res => res.json())
             .then(setTransacciones);
         })
-        .catch(err => console.error("❌ Error al registrar saldo restante:", err));
+        .catch(err => console.error("Error al registrar saldo restante:", err));
       }
     }
   };
@@ -754,7 +754,7 @@ export default function DashboardFinanciero() {
           className={pestanaActiva === "metas" ? "tab active" : "tab"}
           onClick={() => setPestanaActiva("metas")}
         >
-          Mis Metas
+          Mi Meta Próxima
         </button>
         <button
           className={pestanaActiva === "analisis" ? "tab active" : "tab"}
@@ -827,6 +827,31 @@ export default function DashboardFinanciero() {
               </div>
               */}
             </div>
+            
+            {/* CONSEJOS FINANCIEROS */}
+            {consejos.length > 0 && (
+              <div className="consejo-wrapper">
+                <div className="consejo-central">
+                  <h3 className="subtitulo">Consejos financieros</h3>
+                  <p className={`consejo-animado ${visible ? "visible" : ""}`}>
+                    {consejos[consejoActual]}
+                  </p>
+                <div style={{ marginTop: "0.75rem" }}>
+                  <button
+                    className="btn-azul"
+                    onClick={() => {
+                      setVisible(false); // oculta con animación
+                      setTimeout(() => {
+                        setConsejoActual((prev) => (prev + 1) % consejos.length);
+                        setVisible(true); // vuelve a mostrar
+                      }, 200); // esperar que se desvanezca
+                    }}>
+                      Ver otro consejo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
               {/* SALDO RESTANTE */}
               <div className="info-box compacta fila-horizontal">

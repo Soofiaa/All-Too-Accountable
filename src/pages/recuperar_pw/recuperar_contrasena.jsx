@@ -89,7 +89,7 @@ export default function RestablecerContrasena() {
 
           {estado === "éxito" && (
             <p className="olvido-text">
-              ✅ Tu contraseña ha sido actualizada. Serás redirigido en unos segundos.
+              Tu contraseña ha sido actualizada. Serás redirigido en unos segundos.
             </p>
           )}
 

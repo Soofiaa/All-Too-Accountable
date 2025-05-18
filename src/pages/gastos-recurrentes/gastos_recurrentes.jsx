@@ -49,8 +49,6 @@ const PagosRecurrentes = () => {
         const resProgramados = await fetch(`http://localhost:5000/api/pagos_programados/${idUsuario}`);
         const programados = await resProgramados.json();
 
-        console.log("📦 Datos recibidos:", programados);
-
         const pagosMensuales = mensuales.filter(p => p.activo).map(p => ({
           id: p.id_gasto,
           descripcion: p.descripcion ? `${p.nombre} – ${p.descripcion}` : p.nombre,
@@ -73,7 +71,7 @@ const PagosRecurrentes = () => {
         setGastosDesactivados(gastosMensualesDesactivados);
 
         const pagosProgramados = programados
-          .filter(p => p.activo) // ✅ solo los activos
+          .filter(p => p.activo) // solo los activos
           .map(p => {
             const [anio, mes, dia] = p.fecha_emision.split("-");
             const fechaEmisionObj = new Date(Number(anio), Number(mes) - 1, Number(dia));
@@ -245,7 +243,7 @@ const PagosRecurrentes = () => {
               fecha_emision: nuevoPago.fecha_emision,
               tipo_pago: nuevoPago.tipo_pago,
               dias_cheque: nuevoPago.tipo_pago === "cheque" ? parseInt(nuevoPago.dias_cheque) : null,
-              id_categoria: nuevoPago.id_categoria, // ✅ agregado
+              id_categoria: nuevoPago.id_categoria,
               id_usuario: idUsuario
             })
           });
@@ -292,7 +290,7 @@ const PagosRecurrentes = () => {
               fecha_emision: nuevoPago.fecha_emision,
               tipo_pago: nuevoPago.tipo_pago,
               dias_cheque: nuevoPago.tipo_pago === "cheque" ? parseInt(nuevoPago.dias_cheque) : null,
-              id_categoria: nuevoPago.id_categoria, // ✅ agregado
+              id_categoria: nuevoPago.id_categoria,
               id_usuario: idUsuario
             })
           });

@@ -128,15 +128,15 @@ export default function Transacciones() {
 
       const data = await respuesta.json();
       if (respuesta.ok) {
-        setMensajeImportacion(`✅ ${data.mensaje}`);
+        setMensajeImportacion(`${data.mensaje}`);
         cargarTodasTransacciones();
       }
       else {
-        setMensajeImportacion(`❌ Error: ${data.error}`);
+        setMensajeImportacion(`Error: ${data.error}`);
       }
     } catch (error) {
       console.error(error);
-      setMensajeImportacion("❌ Error al conectar con el servidor");
+      setMensajeImportacion("Error al conectar con el servidor");
     }
   };
 
@@ -157,7 +157,7 @@ export default function Transacciones() {
       setTransacciones(visibles);
       setEliminadas(eliminadasDebug);
     } catch (error) {
-      console.error("❌ Error al cargar transacciones:", error);
+      console.error("Error al cargar transacciones:", error);
     }
   };
   
@@ -173,7 +173,7 @@ export default function Transacciones() {
         setCategorias(data);
       })
       .catch(err => {
-        console.error("❌ Error al cargar categorías:", err);
+        console.error("Error al cargar categorías:", err);
       });
   }, []);
 
@@ -188,7 +188,7 @@ export default function Transacciones() {
           method: "POST"
         });
       } catch (error) {
-        console.warn("⚠️ No se pudo generar transacciones recurrentes:", error);
+        console.warn("No se pudo generar transacciones recurrentes:", error);
       }
     };
 
@@ -267,7 +267,7 @@ export default function Transacciones() {
       .then(data => {
         setCategorias(data);
       })
-      .catch(err => console.error("❌ Error al cargar categorías:", err));
+      .catch(err => console.error("Error al cargar categorías:", err));
   }, [idUsuario]);
 
 
@@ -361,7 +361,7 @@ export default function Transacciones() {
       });
       const data = await respuesta.json();
       if (!respuesta.ok) {
-        alert("❌ Error al leer la boleta: " + data.error);
+        alert("Error al leer la boleta: " + data.error);
         return;
       }
 
@@ -402,10 +402,10 @@ export default function Transacciones() {
         monto: prev.monto || (montoMasAlto.toString())
       }));
 
-      alert(`✅ Boleta leída correctamente:\n\n🗓️ Fecha: ${fechaFormateada || "no detectada"}\n💲Monto total: ${montoMasAlto || "no detectado"}`);
+      alert(`✅ Boleta leída correctamente:\n\nFecha: ${fechaFormateada || "no detectada"}\n💲Monto total: ${montoMasAlto || "no detectado"}`);
 
     } catch (error) {
-      console.error("❌ Error al conectar con el servidor OCR:", error);
+      console.error("Error al conectar con el servidor OCR:", error);
       alert("Error al conectar con el servidor.");
     }
   };
@@ -417,7 +417,7 @@ export default function Transacciones() {
       alert("🎉 Micrófono detectado y funcionando.");
       stream.getTracks().forEach(track => track.stop()); // Detiene la grabación de prueba
     } catch (err) {
-      alert("❌ No se pudo acceder al micrófono. Verifica los permisos en el navegador.");
+      alert("No se pudo acceder al micrófono. Verifica los permisos en el navegador.");
       console.error("Error al acceder al micrófono:", err);
     }
   };
@@ -435,7 +435,7 @@ export default function Transacciones() {
     };
 
     r.onerror = (e) => {
-      console.error("❌ Error básico:", e.error);
+      console.error("Error básico:", e.error);
       alert("Error: " + e.error);
     };
   };
@@ -475,7 +475,6 @@ export default function Transacciones() {
 
     return `${anioEntrada}-${mes}-${dia}`;
   };
-
 
   const todas = [...transacciones];
 
@@ -601,7 +600,7 @@ export default function Transacciones() {
       });
 
     } catch (error) {
-      console.error("❌ Error al actualizar transacción:", error);
+      console.error("Error al actualizar transacción:", error);
       alert("No se pudo actualizar la transacción.");
     }
   };
@@ -680,7 +679,7 @@ export default function Transacciones() {
       const suma = montoNum1 + montoNum2;
 
       if (Math.abs(suma - montoNum1) > 0.01 && Math.abs(suma - montoNum2) > 0.01) {
-        alert("❗ La suma del monto 1 y monto 2 no coincide con el monto total ingresado.");
+        alert("La suma del monto 1 y monto 2 no coincide con el monto total ingresado.");
         return;
       }
     }
@@ -705,7 +704,7 @@ export default function Transacciones() {
       nombre_archivo: origen.imagen?.name || null
     };
 
-    console.log("📤 Transacción a enviar:", transaccionAEnviar);
+    console.log("Transacción a enviar:", transaccionAEnviar);
 
     try {
       if (esEdicion) {
@@ -758,7 +757,7 @@ export default function Transacciones() {
 
     } catch (error) {
       console.error("Error al guardar transacción:", error);
-      alert("❌ Error al guardar la transacción");
+      alert("Error al guardar la transacción");
     }
   };
   
@@ -803,7 +802,7 @@ export default function Transacciones() {
       await cargarTodasTransacciones(); // Recarga la vista
     } catch (error) {
       console.error("Error al eliminar transacción:", error);
-      alert("❌ No se pudo eliminar la transacción.");
+      alert("No se pudo eliminar la transacción.");
     }
   };
   
@@ -908,9 +907,9 @@ export default function Transacciones() {
         throw new Error("No se pudo recuperar la transacción");
       }
 
-      await cargarTodasTransacciones(); // ✅ esto actualiza todo el frontend
+      await cargarTodasTransacciones();
     } catch (error) {
-      console.error("❌ Error al recuperar transacción:", error);
+      console.error("Error al recuperar transacción:", error);
       alert("Ocurrió un error al intentar recuperar la transacción.");
     }
   };
@@ -924,7 +923,7 @@ export default function Transacciones() {
       // Quitar del estado eliminadas
       setEliminadas(prev => prev.filter(t => t.id !== id && t.id_transaccion !== id));
     } catch (error) {
-      console.error("❌ Error al borrar definitivamente:", error);
+      console.error("Error al borrar definitivamente:", error);
       alert("No se pudo borrar la transacción permanentemente");
     }
   };
@@ -948,8 +947,8 @@ export default function Transacciones() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("❌ Error al exportar:", errorText);
-        alert("❌ Error al exportar. Verifica si hay transacciones para este mes o si el backend respondió correctamente.");
+        console.error("Error al exportar:", errorText);
+        alert("Error al exportar. Verifica si hay transacciones para este mes o si el backend respondió correctamente.");
         return;
       }
 
@@ -963,8 +962,8 @@ export default function Transacciones() {
       link.remove();
 
     } catch (error) {
-      console.error("❌ Error inesperado al exportar:", error);
-      alert("❌ Error al exportar transacciones. Revisa la consola para más detalles.");
+      console.error("Error inesperado al exportar:", error);
+      alert("Error al exportar transacciones. Revisa la consola para más detalles.");
     }
   };
 
@@ -1210,7 +1209,7 @@ export default function Transacciones() {
                       });
                     }}
                   >
-                    🎤 Iniciar dictado por voz
+                    Iniciar dictado por voz
                   </button>
 
                   <button
@@ -1218,7 +1217,7 @@ export default function Transacciones() {
                     style={{ backgroundColor: "#10b981" }}
                     onClick={probarMicrofono}
                   >
-                    🎙️ Probar micrófono
+                    Probar micrófono
                   </button>
 
                   <button
@@ -1226,9 +1225,8 @@ export default function Transacciones() {
                     style={{ backgroundColor: "#8b5cf6" }}
                     onClick={testReconocimientoBasico}
                   >
-                    🧪 Test dictado básico
+                    Test dictado básico
                   </button>
-
                 </div>
                 
                 {/* Comprobante */}
@@ -1271,7 +1269,7 @@ export default function Transacciones() {
                       setMostrarModalImagen(true);
                     }}
                   >
-                    📄 Ver comprobante
+                    Ver comprobante
                   </button>
                 )}
 
@@ -1309,7 +1307,7 @@ export default function Transacciones() {
                   </select>
                   {modoDictado && pasosDictado[pasoDictado] === "id_categoria" && (
                     <div className="ayuda-dictado-categorias">
-                      <p>📢 Puedes decir una de estas opciones:</p>
+                      <p>Puedes decir una de estas opciones:</p>
                       <ul>
                         {categorias
                           .filter(c => {
@@ -1361,7 +1359,7 @@ export default function Transacciones() {
                   />
                   {modoDictado && pasosDictado[pasoDictado] === "usarSegundoMetodo" && (
                     <div className="ayuda-dictado-categorias">
-                      <p>📢 Puedes decir:</p>
+                      <p>Puedes decir:</p>
                       <ul>
                         <li>“Sí” — para usar dos métodos de pago</li>
                         <li>“No” — para usar solo uno y terminar el dictado</li>
@@ -1389,7 +1387,7 @@ export default function Transacciones() {
                     </select>
                     {modoDictado && pasosDictado[pasoDictado] === "tipoPago" && (
                       <div className="ayuda-dictado-categorias">
-                        <p>📢 Puedes decir uno de estos métodos de pago:</p>
+                        <p>Puedes decir uno de estos métodos de pago:</p>
                         <ul>
                           {metodosMostrar.map((m) => (
                             <li key={m.valor}>{m.label}</li>
@@ -1427,7 +1425,7 @@ export default function Transacciones() {
                         </select>
                         {modoDictado && pasosDictado[pasoDictado] === "tipoPago2" && (
                           <div className="ayuda-dictado-categorias">
-                            <p>📢 Puedes decir uno de estos métodos de pago:</p>
+                            <p>Puedes decir uno de estos métodos de pago:</p>
                             <ul>
                               {metodosMostrar.map((m) => (
                                 <li key={m.valor}>{m.label}</li>
@@ -1516,14 +1514,14 @@ export default function Transacciones() {
               </div>
                 {dictadoFinalizado && (
                   <div className="mensaje-final-dictado">
-                    ✅ Dictado finalizado. Revisa los campos y haz clic en <strong>Guardar</strong>.
+                    Dictado finalizado. Revisa los campos y haz clic en <strong>Guardar</strong>.
                   </div>
                 )}
 
                 {/* Previsualización de datos OCR */}
                 {previaOCR && (
                   <div className="modal-previa-ocr">
-                    <h4>✅ Datos detectados desde la boleta:</h4>
+                    <h4>Datos detectados desde la boleta:</h4>
                     <p><strong>Comercio:</strong> {previaOCR.descripcion}</p>
                     <p><strong>Fecha:</strong> {previaOCR.fecha}</p>
                     <p><strong>Monto total:</strong> ${Number(previaOCR.monto).toLocaleString("es-CL")}</p>

@@ -438,3 +438,28 @@
 .tabla-comparacion td:last-child {
   font-weight: 600;
 }
+
+.consejo-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem auto;
+}
+.consejo-central {
+  background: #ecfdf5;
+  color: #065f46;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  font-style: italic;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  max-width: 600px;
+  width: fit-content;
+  text-align: center;
+}
+.consejo-animado {
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.consejo-animado.visible {
+  opacity: 1;
+}

@@ -22,7 +22,7 @@ export default function OlvidoContrasena() {
 
       const data = await response.json();
       if (response.ok) {
-        setMensaje("✅ Instrucciones enviadas. Revisa tu correo.");
+        setMensaje("Instrucciones enviadas. Revisa tu correo.");
         console.log("Enlace de recuperación:", data.enlace);
       } else {
         setMensaje(data.error || "Error al procesar la solicitud.");
@@ -64,7 +64,6 @@ export default function OlvidoContrasena() {
           </p>
         </section>
       </main>
-
       <FooterPrelogin />
     </div>
   );

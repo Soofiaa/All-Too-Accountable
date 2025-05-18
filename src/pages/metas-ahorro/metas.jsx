@@ -4,7 +4,6 @@ import "./metas.css";
 const idUsuario = localStorage.getItem("id_usuario");
 const API_URL = "http://localhost:5000/api/metas";
 
-
 const obtenerMetasUsuario = async (id_usuario) => {
   const res = await fetch(`${API_URL}/${id_usuario}`);
   return res.json();
@@ -70,13 +69,13 @@ export default function MetasAhorro() {
       await actualizarMeta(idMetaEditar, {
         titulo: nuevaMeta.titulo,
         fecha_limite: nuevaMeta.fecha_limite.split("-").reverse().join("-"),
-        monto_meta: parseInt(nuevaMeta.monto_meta),
+        monto_meta: parseInt(nuevaMeta.monto_meta.replace(/\./g, ""))
       });
     } else {
       await crearMeta({
         ...nuevaMeta,
         fecha_limite: nuevaMeta.fecha_limite.split("-").reverse().join("-"),
-        monto_meta: parseInt(nuevaMeta.monto_meta),
+        monto_meta: parseInt(nuevaMeta.monto_meta.replace(/\./g, "")),
         id_usuario: id_usuario,
       });      
     }
@@ -191,9 +190,15 @@ export default function MetasAhorro() {
               <label>
                 Monto meta
                 <input
-                  type="number"
+                  type="text"
                   value={nuevaMeta.monto_meta}
-                  onChange={(e) => setNuevaMeta({ ...nuevaMeta, monto_meta: e.target.value })}
+                  onChange={(e) => {
+                    const sinPuntos = e.target.value.replace(/\./g, '');
+                    if (!isNaN(sinPuntos)) {
+                      const formateado = Number(sinPuntos).toLocaleString("es-CL");
+                      setNuevaMeta({ ...nuevaMeta, monto_meta: formateado });
+                    }
+                  }}
                 />
               </label>
 

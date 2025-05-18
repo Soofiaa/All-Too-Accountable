@@ -49,7 +49,7 @@ export const iniciarDictadoPaso = ({
       recognition.start();
     }, 300); // Espera 300ms antes de iniciar
   } catch (e) {
-    console.error("❌ Error al reiniciar recognition:", e);
+    console.error("Error al reiniciar recognition:", e);
   }
 
   recognition.onresult = (event) => {
@@ -70,7 +70,7 @@ export const iniciarDictadoPaso = ({
       if (categoriaEncontrada) {
         nueva.id_categoria = categoriaEncontrada.id_categoria;
       } else {
-        alert("❌ Categoría no reconocida. Diga exactamente una opción válida.");
+        alert("Categoría no reconocida. Diga exactamente una opción válida.");
         return;
       }
     }
@@ -84,7 +84,7 @@ export const iniciarDictadoPaso = ({
       if (metodo) {
         nueva.tipoPago = metodo.valor;
       } else {
-        alert("❌ Método de pago no válido. Diga exactamente una de las opciones mostradas.");
+        alert("Método de pago no válido. Diga exactamente una de las opciones mostradas.");
         return;
       }
     }
@@ -112,7 +112,7 @@ export const iniciarDictadoPaso = ({
       if (metodo2) {
         nueva.tipoPago2 = metodo2.valor;
       } else {
-        alert("❌ Segundo tipo de pago no válido.");
+        alert("Segundo tipo de pago no válido.");
         return;
       }
     }
@@ -129,7 +129,7 @@ export const iniciarDictadoPaso = ({
       (nueva.usarSegundoMetodo && campo === "monto2");
 
     if (esUltimoPaso) {
-      console.log("✅ Dictado finalizado automáticamente.");
+      console.log("Dictado finalizado automáticamente.");
       setModoDictado(false);
       setPasoActual(0);
       if (typeof window.setDictadoFinalizado === "function") {
@@ -141,7 +141,7 @@ export const iniciarDictadoPaso = ({
   };
 
   recognition.onerror = (event) => {
-    console.error("🎤 Error en reconocimiento:", event.error);
-    alert("❌ Hubo un error con el reconocimiento de voz.");
+    console.error("Error en reconocimiento:", event.error);
+    alert("Hubo un error con el reconocimiento de voz.");
   };
 };
