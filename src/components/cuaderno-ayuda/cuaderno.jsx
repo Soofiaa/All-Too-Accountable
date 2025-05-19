@@ -22,12 +22,12 @@ export default function Cuaderno({ onClose }) {
         {seccionActiva === "dashboard" && (
           <>
             <div className="bloque-ayuda">
-              <h4>🟦 1. Pestaña: Resumen General</h4>
+              <h4>1. Pestaña: Resumen General</h4>
               <p>Visualiza tu panorama financiero del mes actual.</p>
               <ul>
                 <li><strong>Salario actual:</strong> Se muestra el monto registrado como sueldo. Haz clic en <em>“Editar”</em> para modificarlo. Puedes definir desde qué fecha se aplica.</li>
                 <li><strong>Ahorro acumulado:</strong> Se muestra el ahorro actual. Puedes incrementarlo o descontarlo usando los botones <em>“Añadir”</em> o <em>“Descontar”</em>.</li>
-                <li><strong>Saldo restante del mes:</strong> Calculado como <em>Salario − Gastos</em>. No considera pagos en cuotas con crédito como deuda directa.</li>
+                <li><strong>Saldo restante del mes:</strong> Calculado como <em>Salario + Ingresos − Gastos</em>. No considera pagos en cuotas con crédito como deuda directa.</li>
                 <li><strong>Últimos movimientos:</strong> Muestra las 3 transacciones más recientes con su fecha, descripción y monto. Haz clic en <em>“Ver más transacciones”</em> para revisar el historial completo.</li>
                 <li><strong>Control de límites por categoría:</strong> Tabla que muestra cuánto llevas gastado en cada categoría del mes actual, comparado con su límite (si existe). El estado se marca como:
                   <ul>
@@ -40,7 +40,7 @@ export default function Cuaderno({ onClose }) {
             </div>
 
             <div className="bloque-ayuda">
-              <h4>🟢 2. Pestaña: Mis Metas</h4>
+              <h4>2. Pestaña: Mis Metas</h4>
               <p>Muestra tu meta activa de ahorro.</p>
               <ul>
                 <li><strong>Nombre, monto y fecha límite:</strong> Se presentan los datos básicos de la meta en curso.</li>
@@ -50,7 +50,7 @@ export default function Cuaderno({ onClose }) {
             </div>
 
             <div className="bloque-ayuda">
-              <h4>🟨 3. Pestaña: Análisis Mensual</h4>
+              <h4>3. Pestaña: Análisis Mensual</h4>
               <p>Presenta gráficos detallados con tu evolución financiera del mes.</p>
               <ul>
                 <li><strong>Saldo acumulado:</strong> Gráfico de línea que muestra tu saldo diario.
@@ -66,7 +66,7 @@ export default function Cuaderno({ onClose }) {
 
             <div className="bloque-ayuda">
               <div className="seccion-cuaderno">
-                <h4>📘 4. Pestaña: Alertas & Comparación</h4>
+                <h4>4. Pestaña: Alertas & Comparación</h4>
                 <ul>
                   <li>
                     <strong>Alertas automáticas:</strong> Se muestran advertencias si algún gasto mensual o programado está por cobrarse (dentro de 3 días), o si este mes estás gastando más de lo habitual en alguna categoría.
@@ -89,7 +89,7 @@ export default function Cuaderno({ onClose }) {
         {seccionActiva === "transacciones" && (
           <>
             <div className="bloque-ayuda">
-              <h4>💼 Gestión de Transacciones</h4>
+              <h4>Gestión de Transacciones</h4>
               <p>En esta sección puedes revisar, agregar, editar, eliminar y recuperar tus movimientos financieros. Aquí se concentra todo tu historial de ingresos y gastos.</p>
               <ul>
                 <li><strong>Exportar mes actual:</strong> Presiona el botón azul <em>“Exportar mes actual”</em> para generar un archivo Excel con todas tus transacciones del mes visible.</li>
@@ -114,7 +114,7 @@ export default function Cuaderno({ onClose }) {
             </div>
 
             <div className="bloque-ayuda">
-              <h4>🧾 Tipos de transacciones mostradas</h4>
+              <h4>Tipos de transacciones mostradas</h4>
               <ul>
                 <li><strong>GASTO / INGRESO:</strong> Transacciones ingresadas manualmente por ti.</li>
                 <li><strong>GASTO (IMPORTADO) / INGRESO (IMPORTADO):</strong> Creadas automáticamente desde archivos bancarios subidos.</li>
@@ -125,7 +125,7 @@ export default function Cuaderno({ onClose }) {
             </div>
 
             <div className="bloque-ayuda">
-              <h4>✏️ Editar, eliminar y recuperar</h4>
+              <h4>Editar, eliminar y recuperar</h4>
               <ul>
                 <li><strong>Acciones:</strong> Cada transacción tiene un botón con tres puntos (<strong>…</strong>) en la esquina inferior derecha.</li>
                 <li><strong>Editar:</strong> Al hacer clic en “Editar”, puedes modificar cualquier campo solo si la transacción fue creada manualmente o fue importada. No se pueden editar transacciones generadas por gastos mensuales o programados.</li>
@@ -140,7 +140,7 @@ export default function Cuaderno({ onClose }) {
         {seccionActiva === "categorias" && (
           <>
             <div className="bloque-ayuda">
-              <h4>🏷 Gestión de Categorías</h4>
+              <h4>Gestión de Categorías</h4>
               <p>Las categorías te permiten organizar tus transacciones según su tipo y propósito. Puedes crear, editar o eliminar las que necesites, excepto la categoría <strong>“General”</strong>, que es fija en el sistema.</p>
 
               <ul>
@@ -173,7 +173,7 @@ export default function Cuaderno({ onClose }) {
         {seccionActiva === "recurrentes" && (
           <>
             <div className="bloque-ayuda">
-              <h4>🔁 Gestión de Pagos Recurrentes</h4>
+              <h4>Gestión de Pagos Recurrentes</h4>
               <p>En esta sección puedes registrar gastos automáticos que se repiten cada mes o pagos únicos programados para una fecha específica.</p>
 
               <ul>
@@ -194,7 +194,7 @@ export default function Cuaderno({ onClose }) {
             </div>
 
             <div className="bloque-ayuda">
-              <h4>📂 Gastos recurrentes desactivados</h4>
+              <h4>Gastos recurrentes desactivados</h4>
               <p>Los pagos que ya no están activos aparecerán en esta sección con estado “Desactivado”.</p>
               <ul>
                 <li><strong>Visualización:</strong> Puedes revisar la descripción, monto, categoría y fecha de cobro original.</li>
@@ -208,7 +208,7 @@ export default function Cuaderno({ onClose }) {
         {seccionActiva === "metas" && (
           <>
             <div className="bloque-ayuda">
-              <h4>🎯 Gestión de Metas de Ahorro</h4>
+              <h4>Gestión de Metas de Ahorro</h4>
               <p>Desde esta sección puedes crear, editar o eliminar tus objetivos financieros personales, y hacer seguimiento a tu progreso.</p>
 
               <ul>

@@ -139,3 +139,89 @@
 .btn-reactivar:hover {
   background-color: #2563eb;
 }
+
+@media (max-width: 768px) {
+
+  .contenedor-pagos,
+  .contenido {
+    padding: 1rem;
+  }
+
+  .tabla-categorias,
+  .tabla-pagos {
+    display: block;
+    overflow-x: auto;
+    font-size: 0.9rem;
+  }
+
+  .tabla-categorias thead,
+  .tabla-pagos thead {
+    display: none;
+  }
+
+  .tabla-categorias tbody tr,
+  .tabla-pagos tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    padding: 1rem;
+  }
+
+  .tabla-categorias td,
+  .tabla-pagos td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: none;
+  }
+
+  .tabla-categorias td::before,
+  .tabla-pagos td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #1e3a8a;
+    flex: 1;
+    margin-right: 0.5rem;
+  }
+
+  .tabla-categorias td:last-child,
+  .tabla-pagos td:last-child {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .alerta-vencimiento {
+    font-size: 0.9rem;
+    padding: 0.75rem;
+  }
+
+  .btn-agregar {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .modal-box {
+    width: 95%;
+    padding: 1rem;
+  }
+
+  .modal-box label {
+    font-size: 0.9rem;
+  }
+
+  .modal-box input,
+  .modal-box select {
+    font-size: 0.95rem;
+    padding: 0.4rem;
+  }
+
+  .modal-acciones {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

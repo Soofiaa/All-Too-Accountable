@@ -171,3 +171,76 @@
   transform: translateX(-20px);
   pointer-events: none;
 }
+
+@media (max-width: 768px) {
+
+  .categorias-container {
+    padding: 1rem;
+  }
+
+  .contenido {
+    padding: 0 1rem;
+  }
+
+  .tabla-categorias {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    font-size: 0.9rem;
+  }
+
+  .tabla-categorias thead {
+    display: none;
+  }
+
+  .tabla-categorias tbody tr {
+    display: block;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    padding: 1rem;
+  }
+
+  .tabla-categorias td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: none;
+  }
+
+  .tabla-categorias td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #1e3a8a;
+    flex: 1;
+    margin-right: 0.5rem;
+  }
+
+  .tabla-categorias td:last-child {
+    flex-direction: row;
+    gap: 0.5rem;
+    justify-content: flex-start;
+  }
+
+  .modal-box {
+    padding: 1rem;
+  }
+
+  .modal-box label {
+    font-size: 0.9rem;
+  }
+
+  .modal-box input,
+  .modal-box select {
+    font-size: 0.95rem;
+    padding: 0.4rem;
+  }
+
+  .modal-acciones {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+}

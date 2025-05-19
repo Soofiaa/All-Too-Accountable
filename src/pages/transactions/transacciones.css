@@ -509,11 +509,11 @@ label.required::after {
 }
 
 .item-transaccion.eliminada.gasto {
-  border-left: 5px solid #f87171; /* rojo claro */
+  border-left: 5px solid #f87171;
 }
 
 .item-transaccion.eliminada.ingreso {
-  border-left: 5px solid #34d399; /* verde claro */
+  border-left: 5px solid #34d399;
 }
 
 .botones-agregar-contenedor {
@@ -853,29 +853,29 @@ label.required::after {
 }
 
 .estado-dentro {
-  color: #10b981; /* verde bonito */
+  color: #10b981;
   font-weight: bold;
 }
 
 .estado-sobrepasado {
-  color: #ef4444; /* rojo bonito */
+  color: #ef4444;
   font-weight: bold;
 }
 
 .estado-sin-limite {
-  color: #3b82f6; /* azul claro para "infinito" */
+  color: #3b82f6;
   font-weight: bold;
 }
 
 .tag.gasto-mensual {
-  background-color: #38bdf8; /* celeste */
+  background-color: #38bdf8;
   color: white;
 }
 
 .tarjeta-credito {
   opacity: 0.6;
-  border: 1px dashed #60a5fa; /* celeste tenue */
-  background-color: #f0f9ff;  /* fondo más claro */
+  border: 1px dashed #60a5fa;
+  background-color: #f0f9ff;
   transition: all 0.3s ease;
 }
 
@@ -919,7 +919,7 @@ label.required::after {
   margin: 0.5rem;
   padding: 0.5rem 1rem;
   border: none;
-  background-color: #007bff; /* azul base */
+  background-color: #007bff;
   color: white;
   border-radius: 8px;
   cursor: pointer;
@@ -928,14 +928,14 @@ label.required::after {
 }
 
 .selector-tipo-popup .btn-ingresogasto:hover {
-  background-color: #0056b3; /* azul más oscuro al pasar el mouse */
+  background-color: #0056b3;
 }
 
 .selector-tipo-popup .btn-rojo {
   margin: 0.5rem;
   padding: 0.5rem 1rem;
   border: none;
-  background-color: #dc2626; /* rojo base */
+  background-color: #dc2626;
   color: white;
   border-radius: 8px;
   cursor: pointer;
@@ -944,7 +944,7 @@ label.required::after {
 }
 
 .selector-tipo-popup .btn-rojo:hover {
-  background-color: #991b1b; /* rojo más oscuro */
+  background-color: #991b1b;
 }
 
 .col-izq, .col-der {
@@ -992,7 +992,7 @@ label.required::after {
 
 .botones-selector {
   display: flex;
-  flex-direction: row; /* antes estaba en columna */
+  flex-direction: row;
   gap: 0.5rem;
   margin-top: 0.5rem;
   flex-wrap: wrap;
@@ -1052,7 +1052,7 @@ label.required::after {
 }
 
 .btn-eliminar {
-  background-color: #fecaca; /* rojo suave */
+  background-color: #fecaca;
   color: #991b1b;
 }
 
@@ -1183,7 +1183,7 @@ label.required::after {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  height: 100%; /* fuerza altura consistente */
+  height: 100%;
 }
 
 .fila-metodos-pago input,
@@ -1370,18 +1370,18 @@ label.required::after {
   border-radius: 6px;
   font-size: 0.95rem;
   cursor: pointer;
-  background-color: #e5e7eb; /* gris por defecto */
+  background-color: #e5e7eb;
   color: #1f2937;
   transition: background-color 0.2s;
 }
 
 .btn-tipo.ingreso.activo {
-  background-color: #22c55e; /* verde */
+  background-color: #22c55e;
   color: white;
 }
 
 .btn-tipo.gasto.activo {
-  background-color: #ef4444; /* rojo */
+  background-color: #ef4444;
   color: white;
 }
 
@@ -1410,4 +1410,88 @@ label.required::after {
   list-style: disc;
   padding-left: 1.5rem;
   margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+
+  .transacciones-container {
+    padding: 1rem;
+  }
+
+  .grid-formulario {
+    grid-template-columns: 1fr !important;
+  }
+
+  .fila-metodos-pago {
+    grid-template-columns: 1fr;
+  }
+
+  .filtro-botonera {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .boton-campo {
+    width: 100%;
+  }
+
+  .lista-transacciones {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-exportar {
+    width: 100% !important;
+    left: 0 !important;
+  }
+
+  .modal-content {
+    padding: 1rem;
+  }
+
+  .btn-seleccion-archivo {
+    width: 100%;
+    text-align: center;
+  }
+
+  .importar-excel p {
+    word-break: break-word;
+  }
+
+  .tarjeta-minimal {
+    padding: 1rem;
+  }
+
+  .contenido-horizontal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .fila-superior {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .acciones-transaccion {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .comprobante-y-boton {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .grupo-comprobante {
+    width: 100%;
+  }
+
+  .tooltip-contenido {
+    left: auto;
+    right: 0;
+  }
+
 }

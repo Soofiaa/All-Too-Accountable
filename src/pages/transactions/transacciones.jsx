@@ -1627,7 +1627,12 @@ export default function Transacciones() {
                 <select
                   name="id_categoria"
                   value={nuevaTransaccion.id_categoria || ""}
-                  onChange={handleModalChange}
+                  onChange={(e) =>
+                    setNuevaTransaccion(prev => ({
+                      ...prev,
+                      id_categoria: e.target.value
+                    }))
+                  }
                 >
                   <option value="">Selecciona una categoría</option>
                   {categorias

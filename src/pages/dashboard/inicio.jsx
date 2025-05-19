@@ -175,7 +175,6 @@ export default function DashboardFinanciero() {
 
   useEffect(() => {
     if (!transacciones.length) return;
-
     const datosPorDia = {};
 
     transacciones
@@ -189,9 +188,12 @@ export default function DashboardFinanciero() {
         }
 
         const monto = Number(t.monto);
+
         if (t.tipo === "ingreso") {
           datosPorDia[clave].ingresos += monto;
-        } else if (t.tipo === "gasto" && t.tipoPago !== "credito") {
+        }
+
+        if (t.tipo === "gasto" && t.tipoPago !== "credito") {
           datosPorDia[clave].gastos += monto;
         }
 
@@ -209,20 +211,9 @@ export default function DashboardFinanciero() {
       // incluir salario si es día 1
       const ingresoFinal = dia === 1 ? ingreso + Number(salario || 0) : ingreso;
 
-      // gastos mensuales ese día
-      const gastosMensualesHoy = gastosMensuales
-        .filter(g => Number(g.dia_pago) === dia)
-        .map(g => ({
-          tipo: "gasto",
-          descripcion: g.nombre || "Gasto Mensual",
-          monto: Number(g.monto),
-          esMensual: true
-        }));
-
       // combinar transacciones y gastos mensuales
       const transaccionesTotales = [
-        ...(datosPorDia[clave]?.transacciones || []),
-        ...gastosMensualesHoy
+        ...(datosPorDia[clave]?.transacciones || [])
       ];
 
       datos.push({
@@ -244,17 +235,19 @@ export default function DashboardFinanciero() {
     let saldo = 0;
 
     datosGrafico.forEach((d) => {
-      const [dia, mes] = d.fecha.split("-").map(Number);
-      const gastosFijosHoy = gastosMensuales
-        .filter(g => Number(g.dia_pago) === dia)
-        .reduce((acc, g) => acc + Number(g.monto), 0);
+      // suma ingresos y resta solo gastos REALES, excluyendo los de tipoPago = "credito"
+      const transaccionesFiltradas = d.transacciones.filter(
+        t => t.visible !== false && t.tipo === "gasto" && t.tipoPago !== "credito"
+      );
 
-      saldo += (Number(d.ingreso) - Number(d.gasto) - gastosFijosHoy);
+      const gastoReal = transaccionesFiltradas.reduce((acc, t) => acc + Number(t.monto), 0);
+
+      saldo += Number(d.ingreso) - gastoReal;
       nuevoSaldoAcumulado.push(saldo);
     });
 
     setSaldoAcumulado(nuevoSaldoAcumulado);
-  }, [datosGrafico, gastosMensuales]);
+  }, [datosGrafico]);
 
 
   useEffect(() => {
@@ -817,43 +810,6 @@ export default function DashboardFinanciero() {
                 </div>
               </div>
 
-              {/* FACTURACIÓN}
-              <div className="info-box compacta fila-horizontal">
-                <div className="texto-horizontal">
-                  <span className="label">Día de facturación:</span>
-                  <span className="valor">{diaFacturacion}</span>
-                </div>
-                <button className="btn-azul" onClick={() => setMostrarModalFacturacion(true)}>Editar</button>
-              </div>
-              */}
-            </div>
-            
-            {/* CONSEJOS FINANCIEROS */}
-            {consejos.length > 0 && (
-              <div className="consejo-wrapper">
-                <div className="consejo-central">
-                  <h3 className="subtitulo">Consejos financieros</h3>
-                  <p className={`consejo-animado ${visible ? "visible" : ""}`}>
-                    {consejos[consejoActual]}
-                  </p>
-                <div style={{ marginTop: "0.75rem" }}>
-                  <button
-                    className="btn-azul"
-                    onClick={() => {
-                      setVisible(false); // oculta con animación
-                      setTimeout(() => {
-                        setConsejoActual((prev) => (prev + 1) % consejos.length);
-                        setVisible(true); // vuelve a mostrar
-                      }, 200); // esperar que se desvanezca
-                    }}>
-                      Ver otro consejo
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-              {/* SALDO RESTANTE */}
               <div className="info-box compacta fila-horizontal">
                 <div className="texto-horizontal">
                   <span className="label">Saldo restante del mes:</span>
@@ -873,24 +829,52 @@ export default function DashboardFinanciero() {
                   </div>
                 </div>
               </div>
+            </div>
+            
+            {/* CONSEJO + ÚLTIMOS MOVIMIENTOS en una fila */}
+            <div className="fila-consejo-movimientos">
+              {/* CONSEJOS FINANCIEROS */}
+              {consejos.length > 0 && (
+                <div className="consejo-wrapper">
+                  <div className="consejo-central">
+                    <h3 className="subtitulo">Consejos financieros</h3>
+                    <p className={`consejo-animado ${visible ? "visible" : ""}`}>
+                      {consejos[consejoActual]}
+                    </p>
+                    <div style={{ marginTop: "0.75rem" }}>
+                      <button
+                        className="btn-azul"
+                        onClick={() => {
+                          setVisible(false);
+                          setTimeout(() => {
+                            setConsejoActual((prev) => (prev + 1) % consejos.length);
+                            setVisible(true);
+                          }, 200);
+                        }}>
+                        Ver otro consejo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              {/* ÚLTIMAS TRANSACCIONES */}
-              <div className="info-box">
-                <span className="label">Últimos movimientos:</span>
+              {/* ÚLTIMOS MOVIMIENTOS */}
+              <div className="movimientos-recientes info-box">
+                <span className="label">Top 3 de gastos :</span>
                 <div className="info-row" style={{ flexDirection: "column", alignItems: "flex-start", gap: "0.5rem" }}>
-                  {transacciones
-                    .filter(t => t.visible !== false && t.tipoPago !== "credito")
-                    .slice(-3)
-                    .reverse()
+                  {[...transacciones]
+                    .filter(t => t.visible !== false && t.tipo === "gasto" && t.tipoPago !== "credito")
+                    .sort((a, b) => Number(b.monto) - Number(a.monto))
+                    .slice(0, 3)
                     .map((t, index) => (
                       <div key={index} style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
                         <span>{new Date(t.fecha).toLocaleDateString("es-CL")}</span>
                         <span>{t.descripcion}</span>
-                        <span style={{ color: t.tipo === "gasto" ? "#b91c1c" : "#15803d" }}>
+                        <span style={{ color: "#b91c1c", fontWeight: "bold" }}>
                           ${Number(t.monto).toLocaleString("es-CL")}
                         </span>
                       </div>
-                    ))}
+                  ))}
                 </div>
                 <div style={{ marginTop: "0.75rem", textAlign: "center" }}>
                   <button className="btn-azul" onClick={() => navigate("/transacciones")}>
@@ -899,79 +883,81 @@ export default function DashboardFinanciero() {
                 </div>
               </div>
 
-              <div className="info-box">
-                {/* CONTROL DE LÍMITES POR CATEGORÍA */}
-                <div className="dashboard-card limites-categorias">
-                  <h3>Control de gastos por categoría (mes actual)</h3>
-                  <table className="tabla-limites">
-                    <thead>
-                      <tr>
-                        <th>Categoría</th>
-                        <th>Gasto actual</th>
-                        <th>Monto límite</th>
-                        <th>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...categorias]
-                        .filter(cat => cat.tipo === "Gasto" || cat.tipo === "Ambos") // solo categorías de gasto o ambas
-                        .sort((a, b) => {
-                          const orden = { "General": 0 };
-                          const ordenA = orden[a.nombre] ?? 99;
-                          const ordenB = orden[b.nombre] ?? 99;
-                          return ordenA - ordenB || a.nombre.localeCompare(b.nombre);
-                        })
-                        .map((cat, i) => {
-                          const transaccionesCategoria = transacciones.filter(t =>
-                            t.tipo === "gasto" &&
-                            t.visible !== false &&
-                            t.tipoPago !== "credito" &&
-                            Number(t.id_categoria) === Number(cat.id_categoria)
-                          );
-                          const gastoActual = transaccionesCategoria.reduce((acc, t) => acc + parseFloat(t.monto), 0);
-                          const limite = cat.monto_limite || 0;
+            </div>
 
-                          return (
-                            <tr key={i}>
-                              <td>{cat.nombre}</td>
-                              <td>${gastoActual.toLocaleString("es-CL")}</td>
-                              <td>{limite !== 0 ? `$${limite.toLocaleString("es-CL")}` : "Sin límite"}</td>
-                              <td>
-                                {limite !== 0 ? (
-                                  gastoActual > limite ? (
-                                    <span className="estado-sobrepasado">Sobrepasado</span>
-                                  ) : (
-                                    <span className="estado-dentro">Dentro del límite</span>
-                                  )
+            <div className="info-box">
+              {/* CONTROL DE LÍMITES POR CATEGORÍA */}
+              <div className="dashboard-card limites-categorias">
+                <h3>Control de gastos por categoría (mes actual)</h3>
+                <table className="tabla-limites">
+                  <thead>
+                    <tr>
+                      <th>Categoría</th>
+                      <th>Gasto actual</th>
+                      <th>Monto límite</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...categorias]
+                      .filter(cat => cat.tipo === "Gasto" || cat.tipo === "Ambos") // solo categorías de gasto o ambas
+                      .sort((a, b) => {
+                        const orden = { "General": 0 };
+                        const ordenA = orden[a.nombre] ?? 99;
+                        const ordenB = orden[b.nombre] ?? 99;
+                        return ordenA - ordenB || a.nombre.localeCompare(b.nombre);
+                      })
+                      .map((cat, i) => {
+                        const transaccionesCategoria = transacciones.filter(t =>
+                          t.tipo === "gasto" &&
+                          t.visible !== false &&
+                          t.tipoPago !== "credito" &&
+                          Number(t.id_categoria) === Number(cat.id_categoria)
+                        );
+                        const gastoActual = transaccionesCategoria.reduce((acc, t) => acc + parseFloat(t.monto), 0);
+                        const limite = cat.monto_limite || 0;
+
+                        return (
+                          <tr key={i}>
+                            <td>{cat.nombre}</td>
+                            <td>${gastoActual.toLocaleString("es-CL")}</td>
+                            <td>{limite !== 0 ? `$${limite.toLocaleString("es-CL")}` : "Sin límite"}</td>
+                            <td>
+                              {limite !== 0 ? (
+                                gastoActual > limite ? (
+                                  <span className="estado-sobrepasado">Sobrepasado</span>
                                 ) : (
-                                  <span className="estado-sin-limite">No hay límite</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
+                                  <span className="estado-dentro">Dentro del límite</span>
+                                )
+                              ) : (
+                                <span className="estado-sin-limite">No hay límite</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
               </div>
+            </div>
 
-              {mostrarModalNombre && (
-                <div className="modal-overlay">
-                  <div className="modal-box">
-                    <h3>Cambiar nombre</h3>
-                    <input
-                      type="text"
-                      placeholder="Nuevo nombre"
-                      value={nuevoNombreUsuario}
-                      onChange={(e) => setNuevoNombreUsuario(e.target.value)}
-                    />
-                    <div className="modal-buttons">
-                      <button onClick={handleActualizarNombre}>Guardar</button>
-                      <button onClick={() => setMostrarModalNombre(false)}>Cancelar</button>
-                    </div>
+            {mostrarModalNombre && (
+              <div className="modal-overlay">
+                <div className="modal-box">
+                  <h3>Cambiar nombre</h3>
+                  <input
+                    type="text"
+                    placeholder="Nuevo nombre"
+                    value={nuevoNombreUsuario}
+                    onChange={(e) => setNuevoNombreUsuario(e.target.value)}
+                  />
+                  <div className="modal-buttons">
+                    <button onClick={handleActualizarNombre}>Guardar</button>
+                    <button onClick={() => setMostrarModalNombre(false)}>Cancelar</button>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
           </div>
         )}

@@ -152,10 +152,10 @@ export default function MetasAhorro() {
             <tbody>
             {metas.map((meta) => (
               <tr key={meta.id_meta}>
-                <td>{meta.titulo}</td>
-                <td>{formatearFecha(meta.fecha_limite)}</td>
-                <td>${meta.monto_meta.toLocaleString()}</td>
-                <td className="acciones">
+                <td data-label="Título">{meta.titulo}</td>
+                <td data-label="Fecha límite">{formatearFecha(meta.fecha_limite)}</td>
+                <td data-label="Monto meta">${meta.monto_meta.toLocaleString()}</td>
+                <td className="acciones" data-label="Acciones">
                   <button className="btn-editar" onClick={() => handleEditar(meta)}>Editar</button>
                   <button className="btn-eliminar" onClick={() => handleEliminar(meta.id_meta)}>Eliminar</button>
                 </td>
