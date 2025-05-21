@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./registrarse.css";
 import FooterPrelogin from "../../components/footer-prelogin/footer2";
 import HeaderPrelogin from "../../components/header-prelogin/header2";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function RegistroUsuario() {
   const [fechaNacimiento, setFechaNacimiento] = useState(new Date());
@@ -27,7 +28,7 @@ export default function RegistroUsuario() {
   };
 
   try {
-    const respuesta = await fetch("http://localhost:5000/registro", {
+    const respuesta = await fetch(`${API_URL.replace('/api', '')}/registro`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

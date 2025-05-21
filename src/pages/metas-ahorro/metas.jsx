@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import "./metas.css";
+import { getIdUsuario } from "../../utils/usuario";
 
-const idUsuario = localStorage.getItem("id_usuario");
-const API_URL = "http://localhost:5000/api/metas";
+const API_URL = `${import.meta.env.VITE_API_URL}/metas`;
+const id_usuario = getIdUsuario();
 
 const obtenerMetasUsuario = async (id_usuario) => {
   const res = await fetch(`${API_URL}/${id_usuario}`);
@@ -35,7 +36,6 @@ const eliminarMeta = async (id_meta) => {
 };
 
 export default function MetasAhorro() {
-  const id_usuario = parseInt(localStorage.getItem("id_usuario"));
   const [metas, setMetas] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);

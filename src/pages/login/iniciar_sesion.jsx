@@ -4,17 +4,18 @@ import FooterPrelogin from "../../components/footer-prelogin/footer2";
 import HeaderPrelogin from "../../components/header-prelogin/header2";
 import React, { useState, useEffect } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function IniciarSesion() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-
   const handleLogin = async (event) => {
     event.preventDefault();
 
     try {
-      const respuesta = await fetch("http://localhost:5000/api/usuarios/login", {
+      const respuesta = await fetch(`${API_URL}/usuarios/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -42,14 +43,10 @@ export default function IniciarSesion() {
     
 
   const handleCreateAccount = () => {
-    // Lógica para crear una cuenta
-    console.log("Crear una cuenta");
     navigate('/registrarse');
   };
 
   const handleForgotPassword = () => {
-    // Lógica para olvido de contraseña
-    console.log("Olvidé mi contraseña");
     navigate('/olvide_password');
   };
 

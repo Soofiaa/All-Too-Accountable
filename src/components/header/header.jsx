@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./header.css";
 import { BookOpen } from "lucide-react";
+import { cerrarSesion } from "../../utils/usuario";
 
 export default function Header({ setShowCuaderno }) {
   const navigate = useNavigate();
@@ -10,10 +11,10 @@ export default function Header({ setShowCuaderno }) {
   const handleLogout = () => {
     const confirmLogout = window.confirm("¿Estás seguro de que quieres cerrar sesión?");
     if (confirmLogout) {
-      localStorage.removeItem("usuario"); // BORRA los datos del usuario
+      cerrarSesion();
       navigate("/");
     }
-  };  
+  };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);

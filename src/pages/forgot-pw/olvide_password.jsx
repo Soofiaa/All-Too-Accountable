@@ -3,6 +3,7 @@ import "./olvide_password.css";
 import FooterPrelogin from "../../components/footer-prelogin/footer2";
 import HeaderPrelogin from "../../components/header-prelogin/header2";
 import { useNavigate } from "react-router-dom";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function OlvidoContrasena() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function OlvidoContrasena() {
     setMensaje("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/recuperar_contrasena", {
+      const response = await fetch(`${API_URL}/recuperar_contrasena`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

@@ -8,7 +8,9 @@ import {
   iniciarDictadoPaso,
   pasosDictado
 } from "../../utils/dictado_transaccion";
+import { getIdUsuario } from "../../utils/usuario";
 
+const API_URL = import.meta.env.VITE_API_URL;
 
 const MESES_NOMBRES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -67,7 +69,8 @@ export default function Transacciones() {
   const [pasoDictado, setPasoDictado] = useState(0);
   const recognition = inicializarReconocimiento();
   const [dictadoFinalizado, setDictadoFinalizado] = useState(false);
-
+  const id_usuario = getIdUsuario();
+  
   useEffect(() => {
     // Expone esta función para que otro archivo pueda activarla
     window.setDictadoFinalizado = setDictadoFinalizado;
@@ -118,10 +121,9 @@ export default function Transacciones() {
 
     const formData = new FormData();
     formData.append("archivo", archivoExcel);
-    formData.append("id_usuario", 17); // o el ID real que estés usando
 
     try {
-      const respuesta = await fetch("http://localhost:5000/api/importar_movimientos", {
+      const respuesta = await fetch(`${API_URL}/importar_movimientos`, {
         method: "POST",
         body: formData,
       });
@@ -142,11 +144,10 @@ export default function Transacciones() {
 
 
   const cargarTodasTransacciones = async () => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
 
     try {
-      const respuesta = await fetch(`http://localhost:5000/api/transacciones_completas?id_usuario=${id_usuario}&mes=${mesFiltrado}&anio=${anioFiltrado}`);
+      const respuesta = await fetch(`${API_URL}/transacciones_completas?id_usuario=${id_usuario}&mes=${mesFiltrado}&anio=${anioFiltrado}`);
       const normales = await respuesta.json();
 
       const eliminadasDebug = normales.filter(t => !t.visible);
@@ -163,11 +164,9 @@ export default function Transacciones() {
   
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
-
     if (!id_usuario) return;
 
-    fetch(`http://localhost:5000/api/categorias/${id_usuario}`)
+    fetch(`${API_URL}/categorias/${id_usuario}`)
       .then(res => res.json())
       .then(data => {
         setCategorias(data);
@@ -179,12 +178,11 @@ export default function Transacciones() {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
 
     const generarTransaccionesRecurrentes = async () => {
       try {
-        await fetch(`http://localhost:5000/api/transacciones/generar_mes_actual?id_usuario=${id_usuario}`, {
+        await fetch(`${API_URL}/transacciones/generar_mes_actual?id_usuario=${id_usuario}`, {
           method: "POST"
         });
       } catch (error) {
@@ -262,7 +260,7 @@ export default function Transacciones() {
   useEffect(() => {
     if (!idUsuario) return;
 
-    fetch(`http://localhost:5000/api/categorias?id_usuario=${idUsuario}`)
+    fetch(`${API_URL}/categorias?id_usuario=${idUsuario}`)
       .then(res => res.json())
       .then(data => {
         setCategorias(data);
@@ -355,7 +353,7 @@ export default function Transacciones() {
     formData.append("imagen", nuevaTransaccion.imagen);
 
     try {
-      const respuesta = await fetch("http://localhost:5000/api/leer_boleta", {
+      const respuesta = await fetch(`${API_URL}/leer_boleta`, {
         method: "POST",
         body: formData
       });
@@ -575,7 +573,7 @@ export default function Transacciones() {
         id_gasto_programado: nuevaTransaccion.id_gasto_programado || null
       };
 
-      await fetch(`http://localhost:5000/api/transacciones/${editIndex}`, {
+      await fetch(`${API_URL}/transacciones/${editIndex}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(transaccionAEnviar)
@@ -728,7 +726,7 @@ export default function Transacciones() {
         if (!transaccionAEnviar.imagen) delete transaccionAEnviar.imagen;
         console.log("📤 Transacción a enviar:", transaccionAEnviar);
 
-        await fetch(`http://localhost:5000/api/transacciones`, {
+        await fetch(`${API_URL}/transacciones`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(transaccionAEnviar)
@@ -783,18 +781,18 @@ export default function Transacciones() {
     try {
       if (typeof id === "string" && id.startsWith("gp-")) {
         const idReal = id.split("-")[1];
-        await fetch(`http://localhost:5000/api/transacciones/programados/${idReal}/eliminar`, {
+        await fetch(`${API_URL}/transacciones/programados/${idReal}/eliminar`, {
           method: "PUT"
         });
 
       } else if (typeof id === "string" && id.startsWith("gm-")) {
         const idReal = id.split("-")[1];
-        await fetch(`http://localhost:5000/api/transacciones/mensuales/${idReal}/eliminar`, {
+        await fetch(`${API_URL}/transacciones/mensuales/${idReal}/eliminar`, {
           method: "PUT"
         });
 
       } else {
-        await fetch(`http://localhost:5000/api/transacciones/${id}/eliminar`, {
+        await fetch(`${API_URL}/transacciones/${id}/eliminar`, {
           method: "PUT"
         });
       }
@@ -898,7 +896,7 @@ export default function Transacciones() {
   
   const recuperarTransaccion = async (id) => {
     try {
-      const respuesta = await fetch(`http://localhost:5000/api/transacciones/${id}/recuperar`, {
+      const respuesta = await fetch(`${API_URL}/transacciones/${id}/recuperar`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" }
       });
@@ -916,7 +914,7 @@ export default function Transacciones() {
   
   const borrarDefinitivamente = async (id) => {
     try {
-      await fetch(`http://localhost:5000/api/transacciones/${id}/borrar_definitivo`, {
+      await fetch(`${API_URL}/transacciones/${id}/borrar_definitivo`, {
         method: "DELETE"
       });
 
@@ -928,23 +926,10 @@ export default function Transacciones() {
     }
   };
 
-  const cargarTransacciones = async () => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/transacciones?id_usuario=17`);
-      const data = await response.json();
-      setTransacciones(data);  // o como sea que guardes el listado
-    } catch (error) {
-      console.error("Error al cargar transacciones:", error);
-    }
-  };
-
 
   const exportarMesActual = async (formato) => {
-    const id_usuario = localStorage.getItem("id_usuario");
-
     try {
-      const response = await fetch(`http://localhost:5000/api/transacciones/exportar_mes_actual?id_usuario=${id_usuario}&mes=${mesFiltrado}&anio=${anioFiltrado}&formato=${formato}`)
-
+      const response = await fetch(`${API_URL}/transacciones/exportar_mes_actual?id_usuario=${id_usuario}&mes=${mesFiltrado}&anio=${anioFiltrado}&formato=${formato}`);
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error al exportar:", errorText);
@@ -1131,7 +1116,7 @@ export default function Transacciones() {
 
                     {t.imagen && (
                       <button className="btn-ver-comprobante" onClick={() => {
-                        const url = t.imagen.startsWith("http") ? t.imagen : `http://localhost:5000/imagenes/${t.imagen}`;
+                        const url = t.imagen.startsWith("http") ? t.imagen : `${API_URL.replace("/api", "")}/imagenes/${t.imagen}`;
                         setImagenModal(url);
                         setShowModalImagen(true);
                       }}>
@@ -1583,7 +1568,7 @@ export default function Transacciones() {
                     }
                     const url = imagen.startsWith("http")
                       ? imagen
-                      : `http://localhost:5000/imagenes/${imagen}`;
+                      : `${API_URL.replace("/api", "")}/imagenes/${imagen}`;
                     setImagenModal(url);
                     setShowModalImagen(true);
                   }}

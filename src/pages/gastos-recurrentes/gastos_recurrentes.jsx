@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from "react";
 import "./gastos_recurrentes.css";
+import { getIdUsuario } from "../../utils/usuario";
 
+const API_URL = import.meta.env.VITE_API_URL;
+const idUsuario = getIdUsuario();
 
 const PagosRecurrentes = () => {
-  const idUsuario = localStorage.getItem("id_usuario");
   if (!idUsuario) {
     alert("No se encontró el ID del usuario. Por favor, inicia sesión.");
     return null;
   }
 
-
+  const [gastosMensuales, setGastosMensuales] = useState([]);
+  const [gastosDesactivados, setGastosDesactivados] = useState([]);
+  const [programadosDesactivados, setProgramadosDesactivados] = useState([]);
   const hoy = new Date();
   const [mesFiltrado, setMesFiltrado] = useState(String(hoy.getMonth() + 1));
   const [anioFiltrado, setAnioFiltrado] = useState(String(hoy.getFullYear()));
   const [alertas, setAlertas] = useState([]);
-  const [gastosMensuales, setgastosMensuales] = useState([]);
   const [pagos, setPagos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [modoEdicion, setModoEdicion] = useState(false);
@@ -29,24 +32,26 @@ const PagosRecurrentes = () => {
     tipo_pago: "debito",
     id_categoria: ""
   });
-  const [gastosDesactivados, setGastosDesactivados] = useState([]);
-  const [programadosDesactivados, setProgramadosDesactivados] = useState([]);
   const [todosRecurrentesDesactivados, setTodosRecurrentesDesactivados] = useState([]);
   const [mensajeModal, setMensajeModal] = useState("");
   const [accionModal, setAccionModal] = useState(() => () => {});
   const [mostrarModalFormulario, setMostrarModalFormulario] = useState(false);
   const [mostrarModalConfirmacion, setMostrarModalConfirmacion] = useState(false);
-
-
+  
   useEffect(() => {
     const obtenerPagos = async () => {
       try {
-        await fetch(`http://localhost:5000/api/pagos_programados/actualizar_estado_automatico/${idUsuario}`, {
+        await fetch(`${API_URL}/pagos_programados/actualizar_estado_automatico/${idUsuario}`, {
           method: "PUT"
         });
-        const resMensuales = await fetch(`http://localhost:5000/api/gastos_mensuales?id_usuario=${idUsuario}`);
+        const resMensuales = await fetch(`${API_URL}/gastos_mensuales?id_usuario=${idUsuario}`);
         const mensuales = await resMensuales.json();
-        const resProgramados = await fetch(`http://localhost:5000/api/pagos_programados/${idUsuario}`);
+
+        if (!Array.isArray(mensuales)) {
+          console.error("El backend no devolvió un array:", mensuales);
+          return; // Evita seguir si viene mal
+        }
+        const resProgramados = await fetch(`${API_URL}/pagos_programados/${idUsuario}`);
         const programados = await resProgramados.json();
 
         const pagosMensuales = mensuales.filter(p => p.activo).map(p => ({
@@ -161,10 +166,9 @@ const PagosRecurrentes = () => {
 
   
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
-    if (!id_usuario) return;
+    if (!idUsuario) return;
 
-    fetch(`http://localhost:5000/api/categorias/${id_usuario}`)
+    fetch(`${API_URL}/categorias/${idUsuario}`)
       .then(res => res.json())
       .then(data => setCategorias(data))
       .catch(err => console.error("Error al cargar categorías:", err));
@@ -172,10 +176,9 @@ const PagosRecurrentes = () => {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
-    if (!id_usuario) return;
+    if (!idUsuario) return;
 
-    fetch(`http://localhost:5000/api/pagos_programados/${id_usuario}`)
+    fetch(`${API_URL}/pagos_programados/${idUsuario}`)
       .then(res => res.json())
       .then(data => {
         const hoy = new Date();
@@ -204,7 +207,7 @@ const PagosRecurrentes = () => {
             esProgramado: true
           }));
 
-        setgastosMensuales(prev => [...prev, ...gastosFiltrados]); // usamos el mismo estado para que se integren
+        setGastosMensuales(prev => [...prev, ...gastosFiltrados]);
       })
       .catch(err => {
         console.error("Error al cargar gastos programados:", err);
@@ -221,7 +224,7 @@ const PagosRecurrentes = () => {
     try {
       if (modoEdicion) {
         if (tipoNuevoPago === "mensual") {
-          await fetch(`http://localhost:5000/api/gastos_mensuales/${idEditando}`, {
+          await fetch(`${API_URL}/gastos_mensuales/${idEditando}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -230,11 +233,11 @@ const PagosRecurrentes = () => {
               id_categoria: nuevoPago.id_categoria,
               monto: parseFloat(nuevoPago.monto),
               dia_pago: parseInt(nuevoPago.dia_pago),
-              id_usuario: idUsuario
+              idUsuario: idUsuario
             })
           });
         } else {
-          await fetch(`http://localhost:5000/api/pagos_programados/${idEditando}`, {
+          await fetch(`${API_URL}/pagos_programados/${idEditando}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -244,13 +247,13 @@ const PagosRecurrentes = () => {
               tipo_pago: nuevoPago.tipo_pago,
               dias_cheque: nuevoPago.tipo_pago === "cheque" ? parseInt(nuevoPago.dias_cheque) : null,
               id_categoria: nuevoPago.id_categoria,
-              id_usuario: idUsuario
+              idUsuario: idUsuario
             })
           });
         }
       } else {
         if (tipoNuevoPago === "mensual") {
-          const respuesta = await fetch("http://localhost:5000/api/gastos_mensuales", {
+          const respuesta = await fetch(`${API_URL}/gastos_mensuales`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -259,7 +262,7 @@ const PagosRecurrentes = () => {
               id_categoria: nuevoPago.id_categoria,
               monto: parseFloat(nuevoPago.monto),
               dia_pago: parseInt(nuevoPago.dia_pago),
-              id_usuario: idUsuario
+              idUsuario: idUsuario
             })
           });
 
@@ -268,7 +271,7 @@ const PagosRecurrentes = () => {
           // Si el gasto fue creado con éxito, insertar su transacción
           if (respuesta.ok && data.id_gasto) {
             try {
-              const insertar = await fetch(`http://localhost:5000/api/gastos_mensuales/insertar_transaccion/${data.id_gasto}`, {
+              const insertar = await fetch(`${API_URL}/gastos_mensuales/insertar_transaccion/${data.id_gasto}`, {
                 method: "POST"
               });
 
@@ -281,7 +284,7 @@ const PagosRecurrentes = () => {
             }
           }
         } else {
-          await fetch("http://localhost:5000/api/pagos_programados", {
+          await fetch(`${API_URL}/pagos_programados`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -291,7 +294,7 @@ const PagosRecurrentes = () => {
               tipo_pago: nuevoPago.tipo_pago,
               dias_cheque: nuevoPago.tipo_pago === "cheque" ? parseInt(nuevoPago.dias_cheque) : null,
               id_categoria: nuevoPago.id_categoria,
-              id_usuario: idUsuario
+              idUsuario: idUsuario
             })
           });
         }
@@ -314,9 +317,9 @@ const PagosRecurrentes = () => {
     try {
       let url = "";
       if (pago.tipo === "Mensual") {
-        url = `http://localhost:5000/api/gastos_mensuales/${pago.id}?id_usuario=${idUsuario}`;
+        url = `${API_URL}/gastos_mensuales/${pago.id}?idUsuario=${idUsuario}`;
       } else {
-        url = `http://localhost:5000/api/pagos_programados/${pago.id}`;
+        url = `${API_URL}/pagos_programados/${pago.id}`;
       }
 
       await fetch(url, { method: "DELETE" });
@@ -412,7 +415,7 @@ const PagosRecurrentes = () => {
                           e.stopPropagation();
                           setMensajeModal("¿Deseas desactivar este gasto mensual?");
                           setAccionModal(() => async () => {
-                            await fetch(`http://localhost:5000/api/gastos_mensuales/desactivar/${pago.id}?id_usuario=${idUsuario}`, {
+                            await fetch(`${API_URL}/gastos_mensuales/desactivar/${pago.id}?idUsuario=${idUsuario}`, {
                               method: "PUT"
                             });
                             window.location.reload();
@@ -473,7 +476,7 @@ const PagosRecurrentes = () => {
                           onClick={() => {
                             setMensajeModal("¿Recuperar este gasto mensual?");
                             setAccionModal(() => async () => {
-                              await fetch(`http://localhost:5000/api/gastos_mensuales/reactivar/${gasto.id_gasto}?id_usuario=${idUsuario}`, {
+                              await fetch(`${API_URL}/gastos_mensuales/reactivar/${gasto.id_gasto}?idUsuario=${idUsuario}`, {
                                 method: "PUT"
                               });
                               window.location.reload();

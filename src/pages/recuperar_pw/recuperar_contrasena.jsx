@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import HeaderPrelogin from "../../components/header-prelogin/header2";
 import FooterPrelogin from "../../components/footer-prelogin/footer2";
 import "../forgot-pw/olvide_password.css";
-
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function RestablecerContrasena() {
   const location = useLocation();
@@ -31,7 +31,7 @@ export default function RestablecerContrasena() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/restablecer_contrasena", {
+      const response = await fetch(`${API_URL}/restablecer_contrasena`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,9 +1,12 @@
 import "./ver_categorias.css";
 import React, { useState, useEffect } from "react";
+import { getIdUsuario } from "../../utils/usuario";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const Categorias = () => {
 
-  const idUsuario = localStorage.getItem("id_usuario");
+  const idUsuario = getIdUsuario();
   const [mostrarModalAgregar, setMostrarModalAgregar] = useState(false);
   const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: "", tipo: "", monto_limite: 0 });
   const [categoriaEditando, setCategoriaEditando] = useState(null);
@@ -18,7 +21,7 @@ const Categorias = () => {
   
   const [categorias, setCategorias] = useState([]);
   useEffect(() => {
-    fetch(`http://localhost:5000/api/categorias/${idUsuario}`)
+    fetch(`${API_URL}/categorias/${idUsuario}`)
       .then(res => res.json())
       .then(data => {
         const ordenadas = [...data].sort((a, b) => {
@@ -45,7 +48,7 @@ const Categorias = () => {
 
       setTimeout(async () => {
         try {
-          const respuesta = await fetch(`http://localhost:5000/api/categorias/${id}`, {
+          const respuesta = await fetch(`${API_URL}/categorias/${id}`, {
             method: "DELETE",
           });
 
@@ -93,7 +96,7 @@ const Categorias = () => {
       return;
     }
 
-    const idUsuario = localStorage.getItem("id_usuario");
+    const idUsuario = getIdUsuario();
     const montoLimpio = nuevaCategoria.monto_limite
       ? parseInt(nuevaCategoria.monto_limite.replace(/\./g, ""))
       : 0;
@@ -107,7 +110,7 @@ const Categorias = () => {
       }
 
       try {
-        const respuesta = await fetch(`http://localhost:5000/api/categorias/${categoriaAEditar.id_categoria}`, {
+        const respuesta = await fetch(`${API_URL}/categorias/${categoriaAEditar.id_categoria}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -148,7 +151,7 @@ const Categorias = () => {
       };
 
       try {
-        const respuesta = await fetch("http://localhost:5000/api/categorias/", {
+        const respuesta = await fetch(`${API_URL}/categorias/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nueva)

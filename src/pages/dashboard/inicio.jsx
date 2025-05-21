@@ -12,7 +12,10 @@ import {
   Legend,
 } from "chart.js";
 import axios from "axios";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
+import { getIdUsuario } from "../../utils/usuario";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 ChartJS.register(
   CategoryScale,
@@ -40,15 +43,13 @@ export default function DashboardFinanciero() {
   const [nuevoNombreUsuario, setNuevoNombreUsuario] = useState("");
   const [mostrarModalNombre, setMostrarModalNombre] = useState(false);
   const [transacciones, setTransacciones] = useState([]);
-  const [modoGrafico, setModoGrafico] = useState("mensual"); // "mensual" o "anual"
+  const [modoGrafico, setModoGrafico] = useState("mensual");
   const [datosGrafico, setDatosGrafico] = useState([]);
   const [saldoAcumulado, setSaldoAcumulado] = useState([]);
   const [gastosMensuales, setGastosMensuales] = useState([]);
   const [movimientosAhorro, setMovimientosAhorro] = useState([]);
   const [evolucionAhorro, setEvolucionAhorro] = useState([]);
-  const balanceReal = saldoAcumulado.length > 0 ? saldoAcumulado[saldoAcumulado.length - 1] : 0;
   const [consejos, setConsejos] = useState([]);
-  const [animando, setAnimando] = useState(false);
   const [consejoActual, setConsejoActual] = useState(0);
   const [loading, setLoading] = useState(true);
   const [metas, setMetas] = useState([]);
@@ -57,14 +58,11 @@ export default function DashboardFinanciero() {
   const fechaActual = new Date();
   const [mesSeleccionado, setMesSeleccionado] = useState(fechaActual.getMonth() + 1); // de 1 a 12
   const [anioSeleccionado, setAnioSeleccionado] = useState(fechaActual.getFullYear());
-  const mesActual = mesSeleccionado - 1;
-  const anioActual = anioSeleccionado;
   const [fechaSalario, setFechaSalario] = useState(() => {
     const hoy = new Date().toISOString().split("T")[0];
     return hoy;
   });
   const [pestanaActiva, setPestanaActiva] = useState("resumen");
-  const idUsuario = localStorage.getItem("id_usuario");
   const [categorias, setCategorias] = useState([]);
   const [alertasRecurrentes, setAlertasRecurrentes] = useState([]);
   const [alertasComparativas, setAlertasComparativas] = useState([]);
@@ -75,13 +73,12 @@ export default function DashboardFinanciero() {
   const [anio1, setAnio1] = useState(now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear());
   const [mes2, setMes2] = useState(now.getMonth() + 1);
   const [anio2, setAnio2] = useState(now.getFullYear());
+  const id_usuario = getIdUsuario();
 
-  
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
 
-    fetch(`http://localhost:5000/api/estadisticas/comparar_categorias?id_usuario=${id_usuario}&mes1=${mes1}&anio1=${anio1}&mes2=${mes2}&anio2=${anio2}`)
+    fetch(`${API_URL}/estadisticas/comparar_categorias?id_usuario=${id_usuario}&mes1=${mes1}&anio1=${anio1}&mes2=${mes2}&anio2=${anio2}`)
       .then(res => res.json())
       .then(data => setComparacion(data))
       .catch(err => console.error("Error al comparar categorías:", err));
@@ -89,10 +86,9 @@ export default function DashboardFinanciero() {
 
   
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
   
-    fetch(`http://localhost:5000/api/usuarios/${id_usuario}`)
+    fetch(`${API_URL}/usuarios/${id_usuario}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.nombre_usuario) {
@@ -108,9 +104,8 @@ export default function DashboardFinanciero() {
   
   
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (id_usuario) {
-      fetch(`http://localhost:5000/api/detalles_usuario?id_usuario=${id_usuario}`)
+      fetch(`${API_URL}/detalles_usuario?id_usuario=${id_usuario}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.salario !== undefined) setSalario(data.salario);
@@ -119,7 +114,7 @@ export default function DashboardFinanciero() {
         })        
         .catch((error) => {
           console.error("Error al obtener detalles usuario:", error);
-          setLoading(false); // ← también aquí
+          setLoading(false);
         });
     }
   }, []);     
@@ -134,7 +129,7 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const idUsuario = localStorage.getItem("id_usuario");
+    const idUsuario = getIdUsuario();
     
     if (!idUsuario || idUsuario === "null" || idUsuario === "undefined") {
       navigate("/");  // solo redirige si está mal
@@ -143,10 +138,9 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
 
-    fetch(`http://localhost:5000/api/categorias/${id_usuario}`)
+    fetch(`${API_URL}/categorias/${id_usuario}`)
       .then(res => res.json())
       .then(setCategorias)
       .catch(err => console.error("Error al cargar categorías:", err));
@@ -154,10 +148,9 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
 
-    fetch(`http://localhost:5000/api/transacciones_completas?id_usuario=${id_usuario}&mes=${mesSeleccionado}&anio=${anioSeleccionado}`)
++   fetch(`${API_URL}/transacciones_completas?id_usuario=${id_usuario}&mes=${mesSeleccionado}&anio=${anioSeleccionado}`)
       .then(res => {
         if (!res.ok) throw new Error("Error al obtener transacciones completas");
         return res.json();
@@ -168,7 +161,7 @@ export default function DashboardFinanciero() {
         registrarSaldoSobranteSiCorresponde();
       })
       .catch(error => {
-        console.error("❌ Error al cargar transacciones completas:", error);
+        console.error("Error al cargar transacciones completas:", error);
       });
   }, [mesSeleccionado, anioSeleccionado]);
 
@@ -251,10 +244,9 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
   
-    fetch(`http://localhost:5000/api/movimientos_ahorro?id_usuario=${id_usuario}`)
+    fetch(`${API_URL}/movimientos_ahorro?id_usuario=${id_usuario}`)
       .then(res => res.json())
       .then(data => {
         setMovimientosAhorro(data);
@@ -306,10 +298,9 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
   
-    fetch(`http://localhost:5000/api/metas/${id_usuario}`)
+    fetch(`${API_URL}/metas/${id_usuario}`)
       .then(res => res.json())
       .then(data => setMetas(data))
       .catch(err => console.error("Error al cargar metas:", err));
@@ -345,7 +336,7 @@ export default function DashboardFinanciero() {
       const diffDias = (fechaCobro - hoy) / (1000 * 60 * 60 * 24);
 
       if (diffDias >= 0 && diffDias <= 3) {
-        alertas.push(`⚠️ Tienes un gasto mensual (“${g.nombre}”) programado para el día ${diaCobro}.`);
+        alertas.push(`Tienes un gasto mensual (“${g.nombre}”) programado para el día ${diaCobro}.`);
       }
     });
 
@@ -355,7 +346,7 @@ export default function DashboardFinanciero() {
       const diffDias = (fechaPago - hoy) / (1000 * 60 * 60 * 24);
 
       if (diffDias >= 0 && diffDias <= 3) {
-        alertas.push(`⚠️ Tienes un pago programado (“${g.descripcion}”) para el ${fechaPago.toLocaleDateString("es-CL")}.`);
+        alertas.push(`Tienes un pago programado (“${g.descripcion}”) para el ${fechaPago.toLocaleDateString("es-CL")}.`);
       }
     });
 
@@ -364,24 +355,22 @@ export default function DashboardFinanciero() {
 
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario) return;
 
-    // 🔁 GASTOS MENSUALES
-    fetch(`http://localhost:5000/api/gastos_mensuales?id_usuario=${id_usuario}`)
+    // GASTOS MENSUALES
+    fetch(`${API_URL}/gastos_mensuales?id_usuario=${id_usuario}`)
       .then(res => res.json())
       .then(data => setGastosMensuales(data))
       .catch(err => console.error("Error al cargar gastos mensuales:", err));
 
-    // 🔂 GASTOS PROGRAMADOS
-    fetch(`http://localhost:5000/api/pagos_programados/${id_usuario}`)
+    // GASTOS PROGRAMADOS
+    fetch(`${API_URL}/pagos_programados/${id_usuario}`)
       .then(res => res.json())
       .then(data => setGastosProgramados(data))
       .catch(err => console.error("Error al cargar gastos programados:", err));
   }, []);
 
   useEffect(() => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario || !transacciones.length || !categorias.length) return;
 
     const alertas = [];
@@ -397,7 +386,7 @@ export default function DashboardFinanciero() {
         )
         .reduce((acc, t) => acc + Number(t.monto), 0);
 
-      const res = await fetch(`http://localhost:5000/api/promedios/promedio_categoria?id_usuario=${id_usuario}&id_categoria=${cat.id_categoria}`);
+      const res = await fetch(`${API_URL}/promedios/promedio_categoria?id_usuario=${id_usuario}&id_categoria=${cat.id_categoria}`);
       const data = await res.json();
       const promedio = data.promedio;
 
@@ -415,24 +404,24 @@ export default function DashboardFinanciero() {
     const hoy = new Date();
     const alertas = [];
 
-    // 🔁 GASTOS MENSUALES
+    // GASTOS MENSUALES
     gastosMensuales.forEach(g => {
       const diaCobro = Number(g.dia_pago);
       const fechaCobro = new Date(hoy.getFullYear(), hoy.getMonth(), diaCobro);
       const diffDias = (fechaCobro - hoy) / (1000 * 60 * 60 * 24);
 
       if (diffDias >= 0 && diffDias <= 3) {
-        alertas.push(`📅 El gasto mensual “${g.nombre}” se cobrará el día ${diaCobro} de este mes.`);
+        alertas.push(`El gasto mensual “${g.nombre}” se cobrará el día ${diaCobro} de este mes.`);
       }
     });
 
-    // 🔂 GASTOS PROGRAMADOS
+    // GASTOS PROGRAMADOS
     gastosProgramados.forEach(g => {
       const fecha = new Date(g.fecha_transaccion);
       const diffDias = (fecha - hoy) / (1000 * 60 * 60 * 24);
 
       if (diffDias >= 0 && diffDias <= 3) {
-        alertas.push(`📌 El gasto programado “${g.descripcion}” se cobrará el ${fecha.toLocaleDateString("es-CL")}.`);
+        alertas.push(`El gasto programado “${g.descripcion}” se cobrará el ${fecha.toLocaleDateString("es-CL")}.`);
       }
     });
 
@@ -441,11 +430,10 @@ export default function DashboardFinanciero() {
 
 
   const handleActualizarNombre = () => {
-    const id_usuario = localStorage.getItem("id_usuario");
     const nombre = nuevoNombreUsuario.trim();
   
     if (nombre && id_usuario) {
-      axios.post("http://localhost:5000/api/actualizar_nombre", {
+      axios.post(`${API_URL}/actualizar_nombre`, {
         id_usuario: parseInt(id_usuario),
         nombre_usuario: nombre
       })
@@ -476,34 +464,14 @@ export default function DashboardFinanciero() {
     if (!transaccionesPorFecha[fechaCL]) transaccionesPorFecha[fechaCL] = [];
     transaccionesPorFecha[fechaCL].push(t);
   });
-
-
-  const handleActualizarFacturacion = () => {
-    const id_usuario = localStorage.getItem("id_usuario");
-    if (nuevoDiaFacturacion && id_usuario) {
-      axios.post("http://localhost:5000/api/actualizar_facturacion", {
-        id_usuario: parseInt(id_usuario),
-        dia_facturacion: parseInt(nuevoDiaFacturacion)
-      })
-      .then(() => {
-        setDiaFacturacion(parseInt(nuevoDiaFacturacion));
-        setMostrarModalFacturacion(false);
-      })
-      .catch(err => {
-        console.error("Error al actualizar día de facturación:", err);
-        alert("No se pudo actualizar el día.");
-      });
-    }
-  };
   
 
   const handleSave = () => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (nuevoSalario && id_usuario) {
       const limpio = parseInt(nuevoSalario.replace(/\./g, ""));
       const fechaFinal = fechaSalario || new Date().toISOString().split("T")[0];
   
-      axios.post("http://localhost:5000/api/actualizar_salario", {
+      axios.post(`${API_URL}/actualizar_salario`, {
         id_usuario: parseInt(id_usuario),
         salario: limpio,
         fecha_salario: fechaFinal
@@ -530,7 +498,6 @@ export default function DashboardFinanciero() {
   
   
   const handleQuitarAhorro = () => {
-    const id_usuario = localStorage.getItem("id_usuario");
   
     if (!id_usuario || !montoAhorro) return;
   
@@ -542,7 +509,7 @@ export default function DashboardFinanciero() {
       return;
     }
   
-    fetch("http://localhost:5000/api/movimientos_ahorro", {
+    fetch(`${API_URL}/movimientos_ahorro`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -566,20 +533,18 @@ export default function DashboardFinanciero() {
   };  
 
 
-  const handleAgregarAhorro = () => {
-    const id_usuario = localStorage.getItem("id_usuario");
-  
+  const handleAgregarAhorro = () => {  
     if (montoAhorro !== "" && id_usuario) {
       const valor = parseInt(montoAhorro.replace(/\./g, ""));
       
-      axios.post("http://localhost:5000/api/movimientos_ahorro", {
+      axios.post(`${API_URL}/movimientos_ahorro`, {
         id_usuario: parseInt(id_usuario),
         tipo: "agregar",
         monto: valor,
         fecha: fechaAhorro || new Date().toISOString().split("T")[0]
       })
       .then(() => {
-        return fetch(`http://localhost:5000/api/movimientos_ahorro?id_usuario=${id_usuario}`);
+        return fetch(`${API_URL}/movimientos_ahorro?id_usuario=${id_usuario}`);
       })
       .then(res => res.json())
       .then(data => {
@@ -598,7 +563,6 @@ export default function DashboardFinanciero() {
   
   const verificarYDepositarSalario = (transaccionesExistentes) => {
     const salarioGuardado = salario;
-    const id_usuario = localStorage.getItem("id_usuario");
   
     if (!id_usuario || salarioGuardado === 0) return;
   
@@ -640,7 +604,7 @@ export default function DashboardFinanciero() {
         nombre_archivo: null
       };
   
-      fetch("http://localhost:5000/api/transacciones", {
+      fetch(`${API_URL}/transacciones`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(nuevoIngreso)
@@ -650,7 +614,7 @@ export default function DashboardFinanciero() {
         console.log("Salario depositado automáticamente.");
         // 🚨 AQUÍ HACEMOS ESTO:
         // Volvemos a pedir transacciones actualizadas
-        fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
+        fetch(`${API_URL}/transacciones/${id_usuario}`)
           .then(res => res.json())
           .then(data => {
             setTransacciones(data);
@@ -665,7 +629,6 @@ export default function DashboardFinanciero() {
 
 
   const registrarSaldoSobranteSiCorresponde = () => {
-    const id_usuario = localStorage.getItem("id_usuario");
     if (!id_usuario || saldoAcumulado.length === 0) return;
   
     const ahora = new Date();
@@ -702,7 +665,7 @@ export default function DashboardFinanciero() {
           protegida: true // 👈 clave para frontend (no editable/eliminable)
         };
   
-        fetch("http://localhost:5000/api/transacciones", {
+        fetch(`${API_URL}/transacciones`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(nueva)
@@ -711,7 +674,7 @@ export default function DashboardFinanciero() {
         .then(() => {
           console.log("Saldo restante del mes anterior registrado.");
           // refrescar transacciones
-          fetch(`http://localhost:5000/api/transacciones/${id_usuario}`)
+          fetch(`${API_URL}/transacciones/${id_usuario}`)
             .then(res => res.json())
             .then(setTransacciones);
         })
@@ -759,7 +722,7 @@ export default function DashboardFinanciero() {
             className={pestanaActiva === "alertas" ? "tab active" : "tab"}
             onClick={() => setPestanaActiva("alertas")}
           >
-            Alertas & Comparación
+            Comparación
           </button>
       </div>
 
@@ -885,10 +848,19 @@ export default function DashboardFinanciero() {
 
             </div>
 
-            <div className="info-box">
+            <div className="fila-horizontal">
+              {/* ALERTAS FINANCIERAS */}
+              <div className="alertas-dashboard">
+                <h3 className="subtitulo">Notificaciones</h3>
+                {alertasRecurrentes.length === 0 && <p>No hay alertas por ahora</p>}
+                {alertasRecurrentes.map((msg, i) => (
+                  <div key={i} className="alerta-aviso">{msg}</div>
+                ))}
+              </div>
+
               {/* CONTROL DE LÍMITES POR CATEGORÍA */}
               <div className="dashboard-card limites-categorias">
-                <h3>Control de gastos por categoría (mes actual)</h3>
+                <h3 className="subtitulo">Control de gastos por categoría (mes actual)</h3>
                 <table className="tabla-limites">
                   <thead>
                     <tr>
@@ -900,7 +872,7 @@ export default function DashboardFinanciero() {
                   </thead>
                   <tbody>
                     {[...categorias]
-                      .filter(cat => cat.tipo === "Gasto" || cat.tipo === "Ambos") // solo categorías de gasto o ambas
+                      .filter(cat => cat.tipo === "Gasto" || cat.tipo === "Ambos")
                       .sort((a, b) => {
                         const orden = { "General": 0 };
                         const ordenA = orden[a.nombre] ?? 99;
@@ -964,23 +936,7 @@ export default function DashboardFinanciero() {
 
         {pestanaActiva === "alertas" && (
           <div className="dashboard-alertas">
-            <h2 className="titulo">Alertas y Comparación</h2>
-
-            {alertasRecurrentes.length > 0 && (
-              <div className="alertas-recurrentes">
-                {alertasRecurrentes.map((msg, i) => (
-                  <div key={i} className="alerta-aviso">{msg}</div>
-                ))}
-              </div>
-            )}
-
-            {alertasComparativas.length > 0 && (
-              <div className="alertas-recurrentes">
-                {alertasComparativas.map((msg, i) => (
-                  <div key={i} className="alerta-aviso">{msg}</div>
-                ))}
-              </div>
-            )}
+            <h2 className="titulo">Comparación</h2>
 
             {/* Comparador de Categorías entre Meses */}
             <div className="comparador-categorias">
@@ -1271,7 +1227,11 @@ export default function DashboardFinanciero() {
                         },
                       },
                       scales: {
-                        y: { beginAtZero: true },
+                        y: {
+                          beginAtZero: true,
+                          min: 0,
+                          max: Math.max(...saldoAcumulado) + 10000,
+                        },
                       },
                     }}
                   />
@@ -1307,7 +1267,7 @@ export default function DashboardFinanciero() {
                         y: {
                           beginAtZero: true,
                           min: 0,
-                          max: Math.max(100000, ...evolucionAhorro),
+                          max: Math.max(...evolucionAhorro) + 10000
                         },
                       },
                     }}
