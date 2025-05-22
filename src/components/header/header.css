@@ -1,12 +1,12 @@
 .header-bar {
   width: 100%;
   position: static;
-  top: 0; /* Pegado a la parte superior */
-  left: 0; /* Usar el ancho completo de la pantalla */
+  top: 0;
+  left: 0;
   background-color: #ffffff;
   border-bottom: 1px solid #d1d5db;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-  z-index: 1000; /* Asegurar que el header esté por encima de otros elementos */
+  z-index: 1000;
   transition: top 0.3s ease;
 }
 
@@ -49,7 +49,7 @@
 .header-nav {
   display: flex;
   align-items: center;
-  gap: 1rem; /* Más espacio entre los botones */
+  gap: 1rem;
 }
 
 .nav-button {
@@ -72,7 +72,7 @@
 
 .nav-button:hover {
   background-color: #e5e7eb;
-  transform: scale(1.05); /* Efecto al pasar el mouse */
+  transform: scale(1.05);
 }
 
 .logout-button {

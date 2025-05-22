@@ -314,7 +314,6 @@ label.required::after {
   transition: background-color 0.2s, color 0.2s;
 }
 
-/* Botón editar (amarillo suave) */
 .texto-boton.editar {
   background-color: #fef9c3;
   color: #92400e;
@@ -326,7 +325,6 @@ label.required::after {
   color: #78350f;
 }
 
-/* Botón eliminar (rojo suave) */
 .texto-boton.eliminar {
   background-color: #fee2e2;
   color: #991b1b;
@@ -771,6 +769,7 @@ label.required::after {
   background-color: #e0f2fe;
   color: #0369a1;
   border: 1px solid #bae6fd;
+  width: 20%;
 }
 
 .btn-ver-comprobante:hover {

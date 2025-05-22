@@ -10,8 +10,8 @@
 
 body {
   margin: 0;
-  background-color: #F3F4F6; /* gris claro según tu paleta */
-  color: #1F2937; /* gris oscuro */
+  background-color: #F3F4F6;
+  color: #1F2937;
   min-width: 320px;
   min-height: 100vh;
   display: flex;
@@ -20,10 +20,10 @@ body {
 
 a {
   font-weight: 500;
-  color: #2563EB; /* azul medio */
+  color: #2563EB;
 }
 a:hover {
-  color: #1E40AF; /* azul más oscuro */
+  color: #1E40AF;
 }
 
 button {

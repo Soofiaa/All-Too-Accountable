@@ -29,6 +29,7 @@ export default function Cuaderno({ onClose }) {
                 <li><strong>Ahorro acumulado:</strong> Se muestra el ahorro actual. Puedes incrementarlo o descontarlo usando los botones <em>“Añadir”</em> o <em>“Descontar”</em>.</li>
                 <li><strong>Saldo restante del mes:</strong> Calculado como <em>Salario + Ingresos − Gastos</em>. No considera pagos en cuotas con crédito como deuda directa.</li>
                 <li><strong>Últimos movimientos:</strong> Muestra las 3 transacciones más recientes con su fecha, descripción y monto. Haz clic en <em>“Ver más transacciones”</em> para revisar el historial completo.</li>
+                <li><strong>Alertas automáticas:</strong> Se muestran advertencias si algún gasto mensual o programado está por cobrarse (dentro de 3 días), o si este mes estás gastando más de lo habitual en alguna categoría.</li>
                 <li><strong>Control de límites por categoría:</strong> Tabla que muestra cuánto llevas gastado en cada categoría del mes actual, comparado con su límite (si existe). El estado se marca como:
                   <ul>
                     <li>🟢 <strong>Dentro del límite</strong></li>
@@ -66,11 +67,8 @@ export default function Cuaderno({ onClose }) {
 
             <div className="bloque-ayuda">
               <div className="seccion-cuaderno">
-                <h4>4. Pestaña: Alertas & Comparación</h4>
+                <h4>4. Pestaña: Comparación</h4>
                 <ul>
-                  <li>
-                    <strong>Alertas automáticas:</strong> Se muestran advertencias si algún gasto mensual o programado está por cobrarse (dentro de 3 días), o si este mes estás gastando más de lo habitual en alguna categoría.
-                  </li>
                   <li>
                     <strong>Comparador de categorías:</strong> Permite comparar cuánto has gastado por categoría entre dos meses distintos. 
                     <ul>

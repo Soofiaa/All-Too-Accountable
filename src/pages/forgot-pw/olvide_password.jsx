@@ -37,7 +37,6 @@ export default function OlvidoContrasena() {
   return (
     <div className="olvido-container">
       <HeaderPrelogin />
-
       <main className="olvido-main">
         <section className="olvido-card">
           <h2 className="olvido-title">¿Olvidaste tu contraseña?</h2>

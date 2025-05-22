@@ -277,10 +277,10 @@ const PagosRecurrentes = () => {
 
               if (!insertar.ok) {
                 const errorTexto = await insertar.text();
-                console.warn("⚠️ No se insertó transacción automáticamente:", errorTexto);
+                console.warn("No se insertó transacción automáticamente:", errorTexto);
               }
             } catch (error) {
-              console.error("❌ Error al insertar transacción:", error);
+              console.error("Error al insertar transacción:", error);
             }
           }
         } else {
@@ -338,7 +338,7 @@ const PagosRecurrentes = () => {
           <h2 className="titulo-categorias">Gestión de Pagos Recurrentes</h2>
           {alertas.length > 0 && (
             <div className="alerta-vencimiento">
-              <strong>⚠️ Tienes {alertas.length} pago(s) programado(s) por vencer en los próximos días:</strong>
+              <strong>Tienes {alertas.length} pago(s) programado(s) por vencer en los próximos días:</strong>
               <ul>
                 {alertas.map((a) => (
                   <li key={a.id_gasto_programado}>

@@ -2,7 +2,7 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: #f3f4f6; /* gris suave */
+    background-color: #f3f4f6;
     font-family: sans-serif;
   }
   
@@ -11,7 +11,7 @@
     padding: 1rem;
     font-size: 1.25rem;
     font-weight: bold;
-    color: #1e3a8a; /* azul */
+    color: #1e3a8a;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     text-align: center;
   }

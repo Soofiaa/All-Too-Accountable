@@ -30,10 +30,10 @@ ChartJS.register(
 export default function DashboardFinanciero() {
   const navigate = useNavigate();
   const [gastosProgramados, setGastosProgramados] = useState([]);
-  const [salario, setSalario] = useState(0);
   const [ahorros, setAhorros] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [nuevoSalario, setNuevoSalario] = useState("");
+  const [salario, setSalario] = useState(0);
   const [showAgregarAhorro, setShowAgregarAhorro] = useState(false);
   const [showQuitarAhorro, setShowQuitarAhorro] = useState(false);
   const [montoAhorro, setMontoAhorro] = useState("");
@@ -74,6 +74,21 @@ export default function DashboardFinanciero() {
   const [mes2, setMes2] = useState(now.getMonth() + 1);
   const [anio2, setAnio2] = useState(now.getFullYear());
   const id_usuario = getIdUsuario();
+  const [historialSalario, setHistorialSalario] = useState([]);
+  const [historialSalarios, setHistorialSalarios] = useState([]);
+  const [salarioEditando, setSalarioEditando] = useState(null);
+  const [nuevoSalarioEditado, setNuevoSalarioEditado] = useState("");
+  const [nuevaFechaEditada, setNuevaFechaEditada] = useState("");
+
+  useEffect(() => {
+    if (!id_usuario) return;
+
+    fetch(`${API_URL}/historial_salarios/${id_usuario}`)
+      .then((res) => res.json())
+      .then((data) => setHistorialSalarios(data))
+      .catch((err) => console.error("Error al cargar historial de salarios:", err));
+  }, []);
+
 
   useEffect(() => {
     if (!id_usuario) return;
@@ -83,6 +98,16 @@ export default function DashboardFinanciero() {
       .then(data => setComparacion(data))
       .catch(err => console.error("Error al comparar categorías:", err));
   }, [mes1, anio1, mes2, anio2]);
+
+
+  useEffect(() => {
+    if (!id_usuario) return;
+
+    fetch(`${API_URL}/historial_salarios/${id_usuario}`)
+      .then(res => res.json())
+      .then(data => setHistorialSalario(data))
+      .catch(err => console.error("Error al cargar historial salarial:", err));
+  }, []);
 
   
   useEffect(() => {
@@ -156,8 +181,7 @@ export default function DashboardFinanciero() {
         return res.json();
       })
       .then(data => {
-        setTransacciones(data);
-        verificarYDepositarSalario(data);
+        setTransacciones(data.normales || []);
         registrarSaldoSobranteSiCorresponde();
       })
       .catch(error => {
@@ -180,7 +204,7 @@ export default function DashboardFinanciero() {
           datosPorDia[clave] = { ingresos: 0, gastos: 0, transacciones: [] };
         }
 
-        const monto = Number(t.monto);
+        const monto = t.monto_total != null ? Number(t.monto_total) : Number(t.monto);
 
         if (t.tipo === "ingreso") {
           datosPorDia[clave].ingresos += monto;
@@ -201,8 +225,7 @@ export default function DashboardFinanciero() {
       const ingreso = Number(datosPorDia[clave]?.ingresos || 0);
       const gasto = Number(datosPorDia[clave]?.gastos || 0);
 
-      // incluir salario si es día 1
-      const ingresoFinal = dia === 1 ? ingreso + Number(salario || 0) : ingreso;
+      const ingresoFinal = ingreso;
 
       // combinar transacciones y gastos mensuales
       const transaccionesTotales = [
@@ -233,7 +256,10 @@ export default function DashboardFinanciero() {
         t => t.visible !== false && t.tipo === "gasto" && t.tipoPago !== "credito"
       );
 
-      const gastoReal = transaccionesFiltradas.reduce((acc, t) => acc + Number(t.monto), 0);
+      const gastoReal = transaccionesFiltradas.reduce(
+        (acc, t) => acc + Number(t.monto_total != null ? t.monto_total : t.monto),
+        0
+      );
 
       saldo += Number(d.ingreso) - gastoReal;
       nuevoSaldoAcumulado.push(saldo);
@@ -429,6 +455,13 @@ export default function DashboardFinanciero() {
   }, [gastosMensuales, gastosProgramados]);
 
 
+  async function obtenerHistorialSalarios(id_usuario) {
+    const res = await fetch(`${API_URL}/historial_salarios/${id_usuario}`);
+    if (!res.ok) throw new Error("Error al obtener historial de salarios");
+    return await res.json();
+  }
+
+
   const handleActualizarNombre = () => {
     const nombre = nuevoNombreUsuario.trim();
   
@@ -469,7 +502,8 @@ export default function DashboardFinanciero() {
   const handleSave = () => {
     if (nuevoSalario && id_usuario) {
       const limpio = parseInt(nuevoSalario.replace(/\./g, ""));
-      const fechaFinal = fechaSalario || new Date().toISOString().split("T")[0];
+      const fechaSeleccionada = new Date(fechaSalario || new Date());
+      const fechaFinal = `${fechaSeleccionada.getFullYear()}-${String(fechaSeleccionada.getMonth() + 1).padStart(2, "0")}-01`;
   
       axios.post(`${API_URL}/actualizar_salario`, {
         id_usuario: parseInt(id_usuario),
@@ -488,6 +522,33 @@ export default function DashboardFinanciero() {
       });
     }
   };   
+
+
+  function confirmarEdicionSalario() {
+    fetch(`${API_URL}/editar_salario/${salarioEditando}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        salario: parseInt(nuevoSalarioEditado),
+        fecha_salario: nuevaFechaEditada
+      })
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setHistorialSalarios((prev) =>
+          prev.map((s) =>
+            s.id_detalle === salarioEditando
+              ? { ...s, salario: parseInt(nuevoSalarioEditado), fecha_salario: nuevaFechaEditada }
+              : s
+          )
+        );
+        setSalarioEditando(null);
+      })
+      .catch((err) => {
+        console.error("Error al editar salario:", err);
+        alert("No se pudo editar el salario.");
+      });
+  }
 
 
   function calcularTotalAcumulado() {
@@ -557,73 +618,6 @@ export default function DashboardFinanciero() {
         console.error("Error al agregar ahorro:", err);
         alert("No se pudo agregar el monto.");
       });
-    }
-  };  
-
-  
-  const verificarYDepositarSalario = (transaccionesExistentes) => {
-    const salarioGuardado = salario;
-  
-    if (!id_usuario || salarioGuardado === 0) return;
-  
-    const ahora = new Date();
-    const diaHoy = ahora.getDate(); // 1, 2, 3, ...
-    const mesActual = ahora.getMonth() + 1; // Enero = 0
-    const anioActual = ahora.getFullYear();
-  
-    // Solo intentamos depositar si es día 1
-    if (diaHoy !== 1) {
-      console.log("Hoy no es día de depósito automático (solo el día 1)");
-      return;
-    }
-  
-    const salarioYaDepositado = transaccionesExistentes.some(t => {
-      const fecha = new Date(t.fecha);
-      return (
-        t.descripcion === "Depósito de salario" &&
-        fecha.getMonth() + 1 === mesActual &&
-        fecha.getFullYear() === anioActual
-      );
-    });
-  
-    if (!salarioYaDepositado) {
-      const nuevoIngreso = {
-        id_usuario: parseInt(id_usuario),
-        tipo: "ingreso",
-        fecha: `${anioActual}-${String(mesActual).padStart(2, "0")}-01`,
-        monto: salarioGuardado,
-        categoria: "Salario",
-        descripcion: "Depósito de salario",
-        tipoPago: "transferencia",
-        cuotas: 1,
-        interes: 0,
-        valorCuota: 0,
-        totalCredito: 0,
-        repetido: false,
-        imagen: null,
-        nombre_archivo: null
-      };
-  
-      fetch(`${API_URL}/transacciones`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nuevoIngreso)
-      })
-      .then(res => res.json())
-      .then(() => {
-        console.log("Salario depositado automáticamente.");
-        // 🚨 AQUÍ HACEMOS ESTO:
-        // Volvemos a pedir transacciones actualizadas
-        fetch(`${API_URL}/transacciones/${id_usuario}`)
-          .then(res => res.json())
-          .then(data => {
-            setTransacciones(data);
-          })
-          .catch(error => console.error("Error al refrescar transacciones:", error));
-      })
-      .catch(error => console.error("Error al depositar salario:", error));
-    } else {
-      console.log("El salario de este mes ya fue depositado.");
     }
   };  
 
@@ -796,6 +790,7 @@ export default function DashboardFinanciero() {
             
             {/* CONSEJO + ÚLTIMOS MOVIMIENTOS en una fila */}
             <div className="fila-consejo-movimientos">
+
               {/* CONSEJOS FINANCIEROS */}
               {consejos.length > 0 && (
                 <div className="consejo-wrapper">
@@ -821,20 +816,23 @@ export default function DashboardFinanciero() {
                 </div>
               )}
 
-              {/* ÚLTIMOS MOVIMIENTOS */}
+              {/* TOP 3 GASTOS */}
               <div className="movimientos-recientes info-box">
                 <span className="label">Top 3 de gastos :</span>
                 <div className="info-row" style={{ flexDirection: "column", alignItems: "flex-start", gap: "0.5rem" }}>
                   {[...transacciones]
                     .filter(t => t.visible !== false && t.tipo === "gasto" && t.tipoPago !== "credito")
-                    .sort((a, b) => Number(b.monto) - Number(a.monto))
+                    .sort((a, b) =>
+                      Number(b.monto_total != null ? b.monto_total : b.monto) -
+                      Number(a.monto_total != null ? a.monto_total : a.monto)
+                    )
                     .slice(0, 3)
                     .map((t, index) => (
                       <div key={index} style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
                         <span>{new Date(t.fecha).toLocaleDateString("es-CL")}</span>
                         <span>{t.descripcion}</span>
                         <span style={{ color: "#b91c1c", fontWeight: "bold" }}>
-                          ${Number(t.monto).toLocaleString("es-CL")}
+                          ${Number(t.monto_total != null ? t.monto_total : t.monto).toLocaleString("es-CL")}
                         </span>
                       </div>
                   ))}
@@ -886,7 +884,10 @@ export default function DashboardFinanciero() {
                           t.tipoPago !== "credito" &&
                           Number(t.id_categoria) === Number(cat.id_categoria)
                         );
-                        const gastoActual = transaccionesCategoria.reduce((acc, t) => acc + parseFloat(t.monto), 0);
+                        const gastoActual = transaccionesCategoria.reduce(
+                          (acc, t) => acc + parseFloat(t.monto_total != null ? t.monto_total : t.monto),
+                          0
+                        );
                         const limite = cat.monto_limite || 0;
 
                         return (
@@ -985,10 +986,81 @@ export default function DashboardFinanciero() {
                 </tbody>
               </table>
             </div>
+            <div>
+            <h3 className="subtitulo">Historial de Salarios</h3>
+            <div className="info-grid-3" style={{ flexWrap: "wrap" }}>
+              {historialSalarios.map((s, i) => (
+                <div key={i} className="info-box compacta">
+                  <div className="texto-horizontal">
+                    <span className="label">Desde:</span>
+                    <span className="valor">
+                      {new Date(s.fecha_salario).toLocaleDateString("es-CL", {
+                        timeZone: "UTC",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                      })}
+                    </span>
+                  </div>
+                  <div className="texto-horizontal">
+                    <span className="label">Salario:</span>
+                    <span className="valor">
+                      ${Number(s.salario).toLocaleString("es-CL")}
+                    </span>
+                  </div>
+                  <div className="btn-group">
+                    <button
+                      className="btn-azul"
+                      onClick={() => {
+                        setSalarioEditando(s.id_detalle);
+                        setNuevoSalarioEditado(s.salario.toString());
+                        setNuevaFechaEditada(s.fecha_salario);
+                      }}
+                    >
+                      Editar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           </div>
         )}
 
         {/* MODALES */}
+
+        {salarioEditando !== null && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <h3>Editar salario</h3>
+
+              <label>Monto:</label>
+              <input
+                type="text"
+                value={nuevoSalarioEditado}
+                onChange={(e) => {
+                  const sinPuntos = e.target.value.replace(/\./g, "");
+                  if (!isNaN(sinPuntos)) {
+                    const formateado = Number(sinPuntos).toLocaleString("es-CL");
+                    setNuevoSalarioEditado(formateado);
+                  }
+                }}
+              />
+
+              <label>Fecha desde que aplica:</label>
+              <input
+                type="date"
+                value={nuevaFechaEditada}
+                onChange={(e) => setNuevaFechaEditada(e.target.value)}
+              />
+
+              <div className="modal-buttons">
+                <button onClick={() => confirmarEdicionSalario()}>Guardar</button>
+                <button onClick={() => setSalarioEditando(null)}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showModal && (
           <div className="modal-overlay">
@@ -1206,7 +1278,7 @@ export default function DashboardFinanciero() {
                                 resultado.push("Sin movimientos ese día.");
                               } else {
                                 detalles.forEach(t => {
-                                  const monto = `$${Number(t.monto).toLocaleString("es-CL")}`;
+                                  const monto = `$${Number(t.monto_total != null ? t.monto_total : t.monto).toLocaleString("es-CL")}`;
                                   const emoji = t.tipo === "ingreso" ? "🟢" : "🔴";
                                   const signo = t.tipo === "ingreso" ? "+" : "-";
 

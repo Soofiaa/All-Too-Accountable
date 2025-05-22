@@ -97,15 +97,17 @@ const Categorias = () => {
     }
 
     const idUsuario = getIdUsuario();
-    const montoLimpio = nuevaCategoria.monto_limite
-      ? parseInt(nuevaCategoria.monto_limite.replace(/\./g, ""))
-      : 0;
+    
+    const montoLimpio = 
+      nuevaCategoria.tipo === "Ingreso" || nuevaCategoria.monto_limite === "" 
+        ? 0 
+        : parseInt(nuevaCategoria.monto_limite.replace(/\./g, ""));
 
     if (categoriaEditando !== null) {
       const categoriaAEditar = categorias[categoriaEditando];
 
       if (!categoriaAEditar?.id_categoria) {
-        alert("⚠️ No se encontró el ID de la categoría a editar.");
+        alert("No se encontró el ID de la categoría a editar.");
         return;
       }
 
@@ -115,7 +117,7 @@ const Categorias = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nombre: nuevaCategoria.nombre.trim(),
-            tipo: nuevaCategoria.tipo.trim(),
+            tipo: nuevaCategoria.tipo.trim().toLowerCase(),
             monto_limite: montoLimpio,
             id_usuario: parseInt(idUsuario)
           }),
@@ -145,7 +147,7 @@ const Categorias = () => {
     } else {
       const nueva = {
         nombre: nuevaCategoria.nombre.trim(),
-        tipo: nuevaCategoria.tipo.trim(),
+        tipo: nuevaCategoria.tipo.trim().toLowerCase(),
         monto_limite: montoLimpio,
         id_usuario: parseInt(idUsuario)
       };
@@ -206,7 +208,7 @@ const Categorias = () => {
                   className={`item-categoria fila-categoria ${filaOcultando === categoria.id_categoria ? "fila-oculta" : ""}`}
                 >
                   <td>{categoria.nombre}</td>
-                  <td>{categoria.tipo}</td>
+                  <td>{categoria.tipo.charAt(0).toUpperCase() + categoria.tipo.slice(1)}</td>
                   <td>
                     {categoria.monto_limite ? `$${categoria.monto_limite.toLocaleString("es-CL")}` : "Sin límite"}
                   </td>
@@ -264,7 +266,7 @@ const Categorias = () => {
                         setNuevaCategoria({ ...nuevaCategoria, monto_limite: numeroConPuntos });
                       }
                     }}
-                    disabled={nuevaCategoria.nombre === "General"}
+                    disabled={nuevaCategoria.nombre === "General" || nuevaCategoria.tipo === "Ingreso"}
                   />
                 </label>
                 <div className="modal-acciones">

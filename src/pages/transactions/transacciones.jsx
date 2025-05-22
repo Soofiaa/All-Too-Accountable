@@ -72,10 +72,7 @@ export default function Transacciones() {
   const id_usuario = getIdUsuario();
   
   useEffect(() => {
-    // Expone esta función para que otro archivo pueda activarla
     window.setDictadoFinalizado = setDictadoFinalizado;
-
-    // Limpieza: borra la referencia si el componente se desmonta
     return () => { window.setDictadoFinalizado = null };
   }, []);
 
@@ -100,7 +97,6 @@ export default function Transacciones() {
   ];
 
   const metodosMostrar = tipo === "ingreso" ? metodosIngreso : metodosGasto;
-
 
   const handleArchivoChange = (e) => {
     const file = e.target.files[0];
@@ -142,19 +138,16 @@ export default function Transacciones() {
     }
   };
 
-
   const cargarTodasTransacciones = async () => {
     if (!id_usuario) return;
 
     try {
       const respuesta = await fetch(`${API_URL}/transacciones_completas?id_usuario=${id_usuario}&mes=${mesFiltrado}&anio=${anioFiltrado}`);
-      const normales = await respuesta.json();
-
-      const eliminadasDebug = normales.filter(t => !t.visible);
-
+      const datos = await respuesta.json();
+      const normales = Array.isArray(datos.normales) ? datos.normales : [];
+      const eliminadasDebug = Array.isArray(datos.eliminadas) ? datos.eliminadas : [];
       const visibles = normales.filter(t => t.visible);
       visibles.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
       setTransacciones(visibles);
       setEliminadas(eliminadasDebug);
     } catch (error) {
@@ -224,6 +217,20 @@ export default function Transacciones() {
     nuevaTransaccion.interes,
     nuevaTransaccion.tipoPago
   ]);
+
+
+  useEffect(() => {
+    if (!usarSegundoMetodoEditar) return;
+
+    const monto1 = parseFloat((nuevaTransaccion.monto || "0").toString().replace(/\./g, "").replace(",", ".")) || 0;
+    const monto2 = parseFloat((nuevaTransaccion.monto2 || "0").toString().replace(/\./g, "").replace(",", ".")) || 0;
+    const suma = monto1 + monto2;
+
+    setNuevaTransaccion(prev => ({
+      ...prev,
+      monto: formatearConPuntos(suma.toFixed(0))
+    }));
+  }, [nuevaTransaccion.monto2, usarSegundoMetodoEditar]);
 
 
   const scrollToForm = () => {
@@ -333,7 +340,9 @@ export default function Transacciones() {
       setTransaccionEditada((prev) => ({ ...prev, imagen: newValue }));
       setNuevaTransaccion((prev) => ({ ...prev, imagen: newValue }));
     }
-    else if (name === "monto") newValue = formatearConPuntos(value);
+    else if (name === "monto" || name === "monto2") {
+      newValue = formatearConPuntos(value);
+    }
     else newValue = value;
   
     setNuevaTransaccion((prev) => ({
@@ -364,7 +373,7 @@ export default function Transacciones() {
       }
 
       const texto = data.texto.split("\n").map(l => l.trim()).filter(l => l);
-      console.log("📄 Texto extraído:", texto);
+      console.log("Texto extraído:", texto);
 
       // 1) Intentar extraer fecha en líneas que mencionen Fecha o Emisión
       const regexFechaLine = /(fecha(?:\s+de)?\s*emisi[oó]n?|fecha)\s*[:\-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/i;
@@ -400,7 +409,7 @@ export default function Transacciones() {
         monto: prev.monto || (montoMasAlto.toString())
       }));
 
-      alert(`✅ Boleta leída correctamente:\n\nFecha: ${fechaFormateada || "no detectada"}\n💲Monto total: ${montoMasAlto || "no detectado"}`);
+      alert(`Boleta leída correctamente:\n\nFecha: ${fechaFormateada || "no detectada"}\n💲Monto total: ${montoMasAlto || "no detectado"}`);
 
     } catch (error) {
       console.error("Error al conectar con el servidor OCR:", error);
@@ -447,12 +456,11 @@ export default function Transacciones() {
       julio: "07", agosto: "08", septiembre: "09", octubre: "10", noviembre: "11", diciembre: "12"
     };
 
-    // Convertir tildes, normalizar y eliminar "del", "de"
     texto = texto
       .toLowerCase()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // quitar tildes
-      .replace(/\bdel?\b/g, "") // quitar 'de' y 'del'
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\bdel?\b/g, "")
       .trim();
 
     // Detectar patrones como "25 mayo 2025" o "25 5 2025"
@@ -650,7 +658,7 @@ export default function Transacciones() {
       }, 0);
 
       if ((montoAcumulado + montoNuevo) > categoriaSeleccionada.monto_limite) {
-        alert("🚨 Atención: El monto ingresado supera el límite mensual para esta categoría.");
+        alert("Atención: El monto ingresado supera el límite mensual para esta categoría.");
       }
     }
 
@@ -666,21 +674,6 @@ export default function Transacciones() {
       : parseFloat(origen.monto);
 
     const usar2 = usarSegundoMetodo || usarSegundoMetodoEditar;
-
-    if (usar2) {
-      const monto1 = origen.monto;
-      const monto2 = origen.monto2 || "0";
-
-      const montoNum1 = parseFloat((monto1 || "0").toString().replace(/\./g, "").replace(",", "."));
-      const montoNum2 = parseFloat((monto2 || "0").toString().replace(/\./g, "").replace(",", "."));
-
-      const suma = montoNum1 + montoNum2;
-
-      if (Math.abs(suma - montoNum1) > 0.01 && Math.abs(suma - montoNum2) > 0.01) {
-        alert("La suma del monto 1 y monto 2 no coincide con el monto total ingresado.");
-        return;
-      }
-    }
 
     const transaccionAEnviar = {
       id_usuario,
@@ -818,13 +811,13 @@ export default function Transacciones() {
       alert("No hay transacciones para ese mes y año.");
       return;
     }
-  
+    filtradas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
     const nombreMes = MESES_NOMBRES[parseInt(mesExportar) - 1];
   
     if (formato === "excel") {
       const hojaDatos = filtradas.map(t => ({
         Fecha: t.fecha,
-        Monto: t.monto,
+        Monto: t.monto_total || t.monto,
         Categoría: t.categoria,
         Descripción: t.descripcion,
         Tipo: t.tipo.toUpperCase(),
@@ -835,10 +828,10 @@ export default function Transacciones() {
   
       const totalIngresos = filtradas
         .filter(t => t.tipo === "ingreso")
-        .reduce((acc, curr) => acc + Number(curr.monto), 0);
+        .reduce((acc, curr) => acc + Number(curr.monto_total || curr.monto), 0)
       const totalGastos = filtradas
         .filter(t => t.tipo === "gasto")
-        .reduce((acc, curr) => acc + Number(curr.monto), 0);
+        .reduce((acc, curr) => acc + Number(curr.monto_total || curr.monto), 0)
       const balance = totalIngresos - totalGastos;
   
       const resumenInicioFila = hojaDatos.length + 3;
@@ -1004,7 +997,7 @@ export default function Transacciones() {
                 ref={fileInputRef}
               />
               <label htmlFor="input-archivo" className="btn-seleccion-archivo">
-                📁 Seleccionar archivo de movimientos bancarios
+                Seleccionar archivo de movimientos bancarios
               </label>
               {archivoExcel && (
                 <p style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "#374151" }}>
@@ -1098,7 +1091,10 @@ export default function Transacciones() {
                     </div>
 
                     <div className="contenido-horizontal">
-                      <div className="item"><span>Monto:</span><div className="monto">${Number(t.monto).toLocaleString("es-CL")}</div></div>
+                      <div className="item">
+                        <span>Monto:</span>
+                        <div className="monto">${Number(t.monto_total || t.monto).toLocaleString("es-CL")}</div>
+                      </div>
                       <div className="item">
                         <span>Categoría:</span>
                         <div>
@@ -1116,7 +1112,13 @@ export default function Transacciones() {
 
                     {t.imagen && (
                       <button className="btn-ver-comprobante" onClick={() => {
-                        const url = t.imagen.startsWith("http") ? t.imagen : `${API_URL.replace("/api", "")}/imagenes/${t.imagen}`;
+                        const esURL = t.imagen.startsWith("http");
+                        const yaTieneRuta = t.imagen.includes("/");
+
+                        const url = esURL
+                          ? t.imagen
+                          : `${API_URL.replace("/api", "")}${yaTieneRuta ? "/" : "/imagenes/"}${t.imagen}`;
+                          
                         setImagenModal(url);
                         setShowModalImagen(true);
                       }}>
@@ -1383,7 +1385,7 @@ export default function Transacciones() {
                   </div>
 
                   <div className="campo-monto">
-                    <label>Monto total</label>
+                    <label>{usarSegundoMetodo ? "Monto 1" : "Monto total"}</label>
                     <input
                       type="text"
                       name="monto"
@@ -1548,7 +1550,7 @@ export default function Transacciones() {
             <div className="contenido-eliminada">
               <div className="texto-eliminada">
                 <p><strong>{t.tipo.toUpperCase()}</strong> | {formatearFechaBonita(t.fecha)}</p>
-                <p><strong>Monto:</strong> ${Number(t.monto).toLocaleString("es-CL")}</p>
+                <p><strong>Monto:</strong> ${Number(t.monto_total ?? t.monto).toLocaleString("es-CL")}</p>
                 <p><strong>Categoría:</strong> {
                   (() => {
                     const cat = categorias.find(c => Number(c.id_categoria) === Number(t.id_categoria));
@@ -1685,14 +1687,14 @@ export default function Transacciones() {
 
                 {/* Monto total */}
                 <div className="campo-monto">
-                  <label htmlFor="monto">Monto total</label>
+                  <label htmlFor="monto">{usarSegundoMetodoEditar ? "Monto 1" : "Monto total"}</label>
                   <input
                     type="text"
                     name="monto"
                     id="monto"
                     value={nuevaTransaccion.monto}
                     onChange={handleChange}
-                  />
+                />
                 </div>
 
                 {usarSegundoMetodoEditar && (
@@ -1750,22 +1752,17 @@ export default function Transacciones() {
           <div className="modal-overlay" onClick={() => setShowModalImagen(false)}>
             <div className="modal-imagen" onClick={(e) => e.stopPropagation()}>
               {imagenModal ? (
-                <img
-                  src={imagenModal}
-                  alt="Comprobante"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.style.display = "none";
-                    const fallback = document.createElement("div");
-                    fallback.innerText = "No se pudo cargar el comprobante.";
-                    fallback.style.padding = "1rem";
-                    fallback.style.color = "#ef4444";
-                    e.target.parentNode.appendChild(fallback);
-                  }}
-                />
+              <img
+                src={imagenModal}
+                alt="Comprobante"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  setImagenModal(null);
+                }}
+              />
               ) : (
                 <p style={{ padding: "1rem", color: "#ef4444" }}>
-                  No hay comprobante disponible.
+                  No se pudo cargar el comprobante.
                 </p>
               )}
               <button className="btn-cerrar-modal" onClick={() => setShowModalImagen(false)}>
