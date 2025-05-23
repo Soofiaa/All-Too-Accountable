@@ -16,7 +16,7 @@ export default function Cuaderno({ onClose }) {
           <button onClick={() => setSeccionActiva("transacciones")} className={seccionActiva === "transacciones" ? "activo" : ""}>Transacciones</button>
           <button onClick={() => setSeccionActiva("categorias")} className={seccionActiva === "categorias" ? "activo" : ""}>Categorías</button>
           <button onClick={() => setSeccionActiva("recurrentes")} className={seccionActiva === "recurrentes" ? "activo" : ""}>Gastos Recurrentes</button>
-          <button onClick={() => setSeccionActiva("metas")} className={seccionActiva === "metas" ? "activo" : ""}>Metas</button>
+          <button onClick={() => setSeccionActiva("metas")} className={seccionActiva === "metas" ? "activo" : ""}>Metas de Ahorro</button>
         </div>
 
         {seccionActiva === "dashboard" && (
@@ -28,14 +28,9 @@ export default function Cuaderno({ onClose }) {
                 <li><strong>Salario actual:</strong> Se muestra el monto registrado como sueldo. Haz clic en <em>“Editar”</em> para modificarlo. Puedes definir desde qué fecha se aplica.</li>
                 <li><strong>Ahorro acumulado:</strong> Se muestra el ahorro actual. Puedes incrementarlo o descontarlo usando los botones <em>“Añadir”</em> o <em>“Descontar”</em>.</li>
                 <li><strong>Saldo restante del mes:</strong> Calculado como <em>Salario + Ingresos − Gastos</em>. No considera pagos en cuotas con crédito como deuda directa.</li>
-                <li><strong>Últimos movimientos:</strong> Muestra las 3 transacciones más recientes con su fecha, descripción y monto. Haz clic en <em>“Ver más transacciones”</em> para revisar el historial completo.</li>
+                <li><strong>Últimos movimientos:</strong> Muestra las 3 transacciones más costosas con su fecha, descripción y monto. Haz clic en <em>“Ver más transacciones”</em> para revisar el historial completo.</li>
                 <li><strong>Alertas automáticas:</strong> Se muestran advertencias si algún gasto mensual o programado está por cobrarse (dentro de 3 días), o si este mes estás gastando más de lo habitual en alguna categoría.</li>
                 <li><strong>Control de límites por categoría:</strong> Tabla que muestra cuánto llevas gastado en cada categoría del mes actual, comparado con su límite (si existe). El estado se marca como:
-                  <ul>
-                    <li>🟢 <strong>Dentro del límite</strong></li>
-                    <li>🔴 <strong>Fuera del límite</strong></li>
-                    <li>⚪ <strong>No hay límite</strong></li>
-                  </ul>
                 </li>
               </ul>
             </div>
@@ -54,6 +49,7 @@ export default function Cuaderno({ onClose }) {
               <h4>3. Pestaña: Análisis Mensual</h4>
               <p>Presenta gráficos detallados con tu evolución financiera del mes.</p>
               <ul>
+                <li><strong>Selector de mes y año:</strong> Puedes ver meses anteriores para comparar tu desempeño.</li>
                 <li><strong>Saldo acumulado:</strong> Gráfico de línea que muestra tu saldo diario.
                   <ul>
                     <li><em>Verde</em>: saldo estable o creciente.</li>
@@ -61,7 +57,6 @@ export default function Cuaderno({ onClose }) {
                   </ul>
                 </li>
                 <li><strong>Evolución de ahorros:</strong> Gráfico que muestra cómo han variado tus ahorros durante el mes.</li>
-                <li><strong>Selector de mes y año:</strong> Puedes ver meses anteriores para comparar tu desempeño.</li>
               </ul>
             </div>
 
@@ -78,6 +73,9 @@ export default function Cuaderno({ onClose }) {
                       <li>Si no había gasto el mes anterior, se muestra “N/A”.</li>
                     </ul>
                   </li>
+                  <li>
+                    <strong>Historial de salarios:</strong> Permite ver el historial de sueldos. 
+                  </li>
                 </ul>
               </div>
             </div>
@@ -90,11 +88,11 @@ export default function Cuaderno({ onClose }) {
               <h4>Gestión de Transacciones</h4>
               <p>En esta sección puedes revisar, agregar, editar, eliminar y recuperar tus movimientos financieros. Aquí se concentra todo tu historial de ingresos y gastos.</p>
               <ul>
-                <li><strong>Exportar mes actual:</strong> Presiona el botón azul <em>“Exportar mes actual”</em> para generar un archivo Excel con todas tus transacciones del mes visible.</li>
+                <li><strong>Exportar mes actual:</strong> Presiona el botón azul <em>“Exportar mes actual”</em> para generar un archivo Excel/PDF con todas tus transacciones del mes visible.</li>
                 <li><strong>Importar movimientos bancarios:</strong>
                   <ul>
                     <li>De momento sólo se ha probado con archivos del banco Santander</li>
-                    <li>Haz clic en “Seleccionar archivo de movimientos bancarios” y elige tu archivo Excel o CSV.</li>
+                    <li>Haz clic en “Seleccionar archivo de movimientos bancarios” y elige tu archivo Excel o PDF.</li>
                     <li>Presiona “Subir archivo” para cargarlos.</li>
                     <li>Las transacciones importadas aparecerán con la etiqueta <strong>“GASTO (IMPORTADO)”</strong> o <strong>“INGRESO (IMPORTADO)”</strong>.</li>
                   </ul>
@@ -140,7 +138,6 @@ export default function Cuaderno({ onClose }) {
             <div className="bloque-ayuda">
               <h4>Gestión de Categorías</h4>
               <p>Las categorías te permiten organizar tus transacciones según su tipo y propósito. Puedes crear, editar o eliminar las que necesites, excepto la categoría <strong>“General”</strong>, que es fija en el sistema.</p>
-
               <ul>
                 <li><strong>Agregar categoría:</strong> Haz clic en el botón azul <em>“Agregar categoría”</em> para abrir el formulario. Deberás ingresar:
                   <ul>
@@ -149,11 +146,8 @@ export default function Cuaderno({ onClose }) {
                     <li><strong>Monto límite:</strong> opcional. Puedes establecer un máximo mensual para ayudarte a no pasarte de ese valor en esa categoría.</li>
                   </ul>
                 </li>
-
                 <li><strong>Editar:</strong> Usa el botón <em>“Editar”</em> junto a cada categoría para modificar su nombre, tipo o límite. No puedes editar la categoría “General”.</li>
-
                 <li><strong>Eliminar:</strong> Haz clic en el botón <em>“Eliminar”</em> para borrar una categoría. Solo puedes eliminar categorías que no estén en uso por transacciones actuales.</li>
-
                 <li><strong>Tipo de categoría:</strong> Cada categoría se asocia a uno de estos tipos:
                   <ul>
                     <li><strong>Gasto:</strong> Solo aparecerá al registrar egresos.</li>
@@ -161,7 +155,6 @@ export default function Cuaderno({ onClose }) {
                     <li><strong>Ambos:</strong> Se puede usar para ingresos o gastos, útil para categorías generales.</li>
                   </ul>
                 </li>
-
                 <li><strong>Uso de categorías:</strong> Al crear una transacción, deberás asignar una categoría válida según su tipo. Esto permite visualizar mejor tus patrones de gasto e ingreso.</li>
               </ul>
             </div>
@@ -173,7 +166,6 @@ export default function Cuaderno({ onClose }) {
             <div className="bloque-ayuda">
               <h4>Gestión de Pagos Recurrentes</h4>
               <p>En esta sección puedes registrar gastos automáticos que se repiten cada mes o pagos únicos programados para una fecha específica.</p>
-
               <ul>
                 <li><strong>Agregar nuevo pago:</strong> Presiona el botón azul <em>“Agregar nuevo pago”</em> para abrir el formulario. Debes indicar:
                   <ul>
@@ -184,9 +176,7 @@ export default function Cuaderno({ onClose }) {
                     <li><strong>Fecha de cobro:</strong> Día del mes (en gastos mensuales) o una fecha exacta (en pagos programados).</li>
                   </ul>
                 </li>
-
                 <li><strong>Editar:</strong> Usa el botón <em>“Editar”</em> para modificar cualquier dato del gasto recurrente.</li>
-
                 <li><strong>Desactivar:</strong> Presiona <em>“Desactivar”</em> si ya no quieres que el gasto mensual se siga generando. Este se moverá automáticamente a la sección de <strong>Gastos recurrentes desactivados</strong>.</li>
               </ul>
             </div>
@@ -208,7 +198,6 @@ export default function Cuaderno({ onClose }) {
             <div className="bloque-ayuda">
               <h4>Gestión de Metas de Ahorro</h4>
               <p>Desde esta sección puedes crear, editar o eliminar tus objetivos financieros personales, y hacer seguimiento a tu progreso.</p>
-
               <ul>
                 <li><strong>Agregar meta de ahorro:</strong> Haz clic en el botón azul <em>“Agregar meta de ahorro”</em> para abrir el formulario. Debes completar:
                   <ul>
@@ -217,14 +206,9 @@ export default function Cuaderno({ onClose }) {
                     <li><strong>Fecha límite:</strong> (opcional) Define hasta cuándo deseas cumplir la meta.</li>
                   </ul>
                 </li>
-
                 <li><strong>Ver tus metas:</strong> Se listan en una tabla con su título, monto y fecha. Desde aquí puedes monitorearlas.</li>
-
                 <li><strong>Editar:</strong> Haz clic en el botón <em>“Editar”</em> para cambiar el nombre, el monto o la fecha de la meta.</li>
-
                 <li><strong>Eliminar:</strong> Usa el botón <em>“Eliminar”</em> para quitar la meta del sistema. Esto no afecta tu ahorro acumulado.</li>
-
-                <li><strong>Progreso de ahorro:</strong> El sistema compara el monto ahorrado actual con tus metas para mostrar cuánto has avanzado.</li>
               </ul>
             </div>
           </>
