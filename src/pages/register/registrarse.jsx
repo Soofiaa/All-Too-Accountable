@@ -28,7 +28,7 @@ export default function RegistroUsuario() {
   };
 
   try {
-    const respuesta = await fetch(`${API_URL.replace('/api', '')}/registro`, {
+    const respuesta = await fetch(`${API_URL}/usuarios/registro`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
