@@ -1,21 +1,22 @@
-import React from "react";  
+import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "../components/header/header";
 import Footer from "../components/footer/footer";
-import { useState } from "react";
 import Cuaderno from "../components/cuaderno-ayuda/cuaderno";
 
 export default function AppLayout() {
   const [showCuaderno, setShowCuaderno] = useState(false);
 
   return (
-    <>
+    <div className="page-layout">
       <Header setShowCuaderno={setShowCuaderno} />
       {showCuaderno && <Cuaderno onClose={() => setShowCuaderno(false)} />}
-      <main>
+
+      <div className="main-contenido">
         <Outlet />
-      </main>
-      <Footer/>
-    </>
+      </div>
+
+      <Footer />
+    </div>
   );
 }
