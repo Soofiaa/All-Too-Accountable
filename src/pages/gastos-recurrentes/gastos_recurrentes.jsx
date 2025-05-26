@@ -579,7 +579,7 @@ const PagosRecurrentes = () => {
 
                 <div className="modal-acciones">
                   <button className="btn-aceptar" onClick={handleGuardarNuevoPago}>Guardar</button>
-                  <button className="btn-cancelar" onClick={() => setMostrarModalConfirmacion(false)}>Cancelar</button>
+                  <button className="btn-cancelar" onClick={() => setMostrarModalFormulario(false)}>Cancelar</button>
                 </div>
               </div>
             </div>
