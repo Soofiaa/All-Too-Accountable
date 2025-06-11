@@ -43,6 +43,7 @@ export default function MetasAhorro() {
   const [nuevaMeta, setNuevaMeta] = useState({ titulo: "", fecha_limite: "", monto_meta: "" });
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [metaAEliminar, setMetaAEliminar] = useState(null);
+  const metaActiva = metas.find(m => m.activa === true);
 
   const formatearFecha = (fechaISO) => {
     const [año, mes, dia] = fechaISO.split("T")[0].split("-");
@@ -63,27 +64,44 @@ export default function MetasAhorro() {
     if (!nuevaMeta.titulo.trim() || !nuevaMeta.fecha_limite || !nuevaMeta.monto_meta) {
       alert("Todos los campos son obligatorios.");
       return;
-    }    
-  
+    }
+
+    const hoy = new Date();
+    const fechaIngresada = new Date(nuevaMeta.fecha_limite);
+    fechaIngresada.setHours(0, 0, 0, 0);
+    hoy.setHours(0, 0, 0, 0);
+
+    if (fechaIngresada < hoy) {
+      alert("La fecha límite no puede ser anterior a hoy.");
+      return;
+    }
+
+    // Convertimos el monto a string por seguridad, quitamos puntos y lo parseamos
+    const montoStr = String(nuevaMeta.monto_meta);
+    const montoInt = parseInt(montoStr.replace(/\./g, ""), 10);
+
+    // Convertimos fecha de YYYY-MM-DD a DD-MM-YYYY
+    const fechaFormateada = nuevaMeta.fecha_limite.split("-").reverse().join("-");
+
     if (modoEdicion) {
       await actualizarMeta(idMetaEditar, {
         titulo: nuevaMeta.titulo,
-        fecha_limite: nuevaMeta.fecha_limite.split("-").reverse().join("-"),
-        monto_meta: parseInt(nuevaMeta.monto_meta.replace(/\./g, ""))
+        fecha_limite: fechaFormateada,
+        monto_meta: montoInt
       });
     } else {
       await crearMeta({
         ...nuevaMeta,
-        fecha_limite: nuevaMeta.fecha_limite.split("-").reverse().join("-"),
-        monto_meta: parseInt(nuevaMeta.monto_meta.replace(/\./g, "")),
+        fecha_limite: fechaFormateada,
+        monto_meta: montoInt,
         id_usuario: id_usuario,
-      });      
+      });
     }
-  
+
     // Recarga la lista actualizada desde la base de datos
     const datos = await obtenerMetasUsuario(id_usuario);
     setMetas(datos);
-  
+
     // Reset de estado del formulario y cierre de modal
     setNuevaMeta({ titulo: "", fecha_limite: "", monto_meta: "" });
     setModoEdicion(false);
@@ -100,11 +118,29 @@ export default function MetasAhorro() {
   };
 
   const handleEditar = (meta) => {
+    let fechaISO = "";
+
+    if (typeof meta.fecha_limite === "string" && meta.fecha_limite.includes("-")) {
+      const partes = meta.fecha_limite.split("-");
+      if (partes[0].length === 4) {
+        // ya está en formato YYYY-MM-DD (por si viene así)
+        fechaISO = meta.fecha_limite;
+      } else {
+        // viene como DD-MM-YYYY → lo convertimos
+        fechaISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
+      }
+    } else {
+      // si viniera como objeto Date (no debería, pero lo cubrimos)
+      const fechaObj = new Date(meta.fecha_limite);
+      fechaISO = fechaObj.toISOString().split("T")[0];
+    }
+
     setNuevaMeta({
       titulo: meta.titulo,
-      fecha_limite: meta.fecha_limite,
-      monto_meta: meta.monto_meta,
+      fecha_limite: fechaISO,
+      monto_meta: Number(meta.monto_meta).toLocaleString("es-CL"),
     });
+
     setIdMetaEditar(meta.id_meta);
     setModoEdicion(true);
     setMostrarModal(true);
@@ -150,17 +186,28 @@ export default function MetasAhorro() {
               </tr>
             </thead>
             <tbody>
-            {metas.map((meta) => (
-              <tr key={meta.id_meta}>
-                <td data-label="Título">{meta.titulo}</td>
-                <td data-label="Fecha límite">{formatearFecha(meta.fecha_limite)}</td>
-                <td data-label="Monto meta">${meta.monto_meta.toLocaleString()}</td>
-                <td className="acciones" data-label="Acciones">
-                  <button className="btn-editar" onClick={() => handleEditar(meta)}>Editar</button>
-                  <button className="btn-eliminar" onClick={() => handleEliminar(meta.id_meta)}>Eliminar</button>
-                </td>
-              </tr>
-            ))}
+            {[...metas]
+              .filter((meta) => {
+                const hoy = new Date();
+                const fechaMeta = new Date(meta.fecha_limite);
+                return meta.activa || fechaMeta >= hoy;
+              })
+              .sort((a, b) => new Date(a.fecha_limite) - new Date(b.fecha_limite))
+              .map((meta) => {
+                const esActiva = meta.activa === true;
+
+                return (
+                  <tr key={meta.id_meta}>
+                    <td data-label="Título" className={!esActiva ? "meta-inactiva" : ""}>{meta.titulo}</td>
+                    <td data-label="Fecha límite" className={!esActiva ? "meta-inactiva" : ""}>{formatearFecha(meta.fecha_limite)}</td>
+                    <td data-label="Monto meta" className={!esActiva ? "meta-inactiva" : ""}>${meta.monto_meta.toLocaleString()}</td>
+                    <td className="acciones" data-label="Acciones">
+                      <button className="btn-editar" onClick={() => handleEditar(meta)}>Editar</button>
+                      <button className="btn-eliminar" onClick={() => handleEliminar(meta.id_meta)}>Eliminar</button>
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
           </table>
         </div>

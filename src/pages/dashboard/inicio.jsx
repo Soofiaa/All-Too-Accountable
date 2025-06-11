@@ -78,6 +78,7 @@ export default function DashboardFinanciero() {
   const [salarioEditando, setSalarioEditando] = useState(null);
   const [nuevoSalarioEditado, setNuevoSalarioEditado] = useState("");
   const [nuevaFechaEditada, setNuevaFechaEditada] = useState("");
+  const metaActiva = metas.find(m => m.activa === true);
 
   useEffect(() => {
     if (!id_usuario) return;
@@ -1183,19 +1184,27 @@ export default function DashboardFinanciero() {
                   Ir a mis metas
                 </button>
               </div>
-              <h3>{metas[0].titulo}</h3>
-              <p>
-                Meta: ${metas[0].monto_meta.toLocaleString("es-CL")} <br />
-                Fecha límite: {metas[0].fecha_limite}
+              {metaActiva ? (
+              <>
+                <h3>{metaActiva.titulo}</h3>
+                <p>
+                  Meta: ${metaActiva.monto_meta.toLocaleString("es-CL")} <br />
+                  Fecha límite: {metaActiva.fecha_limite}
+                </p>
+                <div className="barra-progreso">
+                  <div
+                    className="barra-llenado"
+                    style={{
+                      width: `${Math.min((totalAhorros / metaActiva.monto_meta) * 100, 100)}%`,
+                    }}
+                  ></div>
+                </div>
+              </>
+            ) : (
+              <p style={{ textAlign: "center" }}>
+                No tienes una meta activa en este momento.
               </p>
-              <div className="barra-progreso">
-                <div
-                  className="barra-llenado"
-                  style={{
-                    width: `${Math.min((totalAhorros / metas[0].monto_meta) * 100, 100)}%`,
-                  }}
-                ></div>
-              </div>
+            )}
             </div>
           </div>
         )}

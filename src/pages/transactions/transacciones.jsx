@@ -117,6 +117,7 @@ export default function Transacciones() {
 
     const formData = new FormData();
     formData.append("archivo", archivoExcel);
+    formData.append("id_usuario", id_usuario);
 
     try {
       const respuesta = await fetch(`${API_URL}/importar_movimientos`, {
@@ -237,6 +238,20 @@ export default function Transacciones() {
   const scrollToForm = () => {
     if (formularioRef.current) {
       formularioRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const limpiarDuplicados = async () => {
+    try {
+      const res = await fetch(`${API_URL}/transacciones/limpiar_duplicados?id_usuario=${id_usuario}`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      alert(data.mensaje);
+      console.log("Eliminadas:", data.eliminadas);
+    } catch (error) {
+      console.error("Error al limpiar duplicados:", error);
+      alert("Error al limpiar duplicados");
     }
   };
 
@@ -1010,6 +1025,16 @@ export default function Transacciones() {
               </button>
               {mensajeImportacion && <p>{mensajeImportacion}</p>}
             </div>
+            
+
+            {
+            /* ES PARA ELIMINAR LOS GASTOS MENSUALES DUPLICADOS
+            <button onClick={limpiarDuplicados} className="btn-eliminar">
+              Limpiar duplicados (admin)
+            </button>
+            */
+            }
+            
           </div>
         </div>
         
@@ -1059,7 +1084,6 @@ export default function Transacciones() {
       </div>
 
       <h3 className="titulo-secundario">Transacciones registradas</h3>
-
         <div className="lista-transacciones">
           {(() => {
             const filas = [];
@@ -1450,7 +1474,7 @@ export default function Transacciones() {
                 </div>
 
                 {/* Créditos (si se eligió crédito) */}
-                {nuevaTransaccion.tipoPago === "credito" && (
+                {(nuevaTransaccion.tipoPago === "credito" || nuevaTransaccion.tipoPago2 === "credito") && (
                   <>
                     <div>
                       <label>Cuotas:</label>
@@ -1707,41 +1731,88 @@ export default function Transacciones() {
                     id="monto"
                     value={nuevaTransaccion.monto}
                     onChange={handleChange}
-                />
+                  />
                 </div>
 
                 {usarSegundoMetodoEditar && (
-                <>
-                  <div className="campo-tipopago">
-                    <label htmlFor="tipoPago2">Segundo tipo de pago</label>
-                    <select
-                      name="tipoPago2"
-                      id="tipoPago2"
-                      value={nuevaTransaccion.tipoPago2}
-                      onChange={handleChange}
-                    >
-                      <option value="">Selecciona</option>
-                      <option value="efectivo">Efectivo</option>
-                      <option value="transferencia">Transferencia</option>
-                      <option value="debito">Débito</option>
-                      <option value="credito">Crédito</option>
-                      <option value="contribucion tarjeta de credito">Contribución Tarjeta de Crédito</option>
-                    </select>
-                  </div>
+                  <>
+                    <div className="campo-tipopago">
+                      <label htmlFor="tipoPago2">Segundo tipo de pago</label>
+                      <select
+                        name="tipoPago2"
+                        id="tipoPago2"
+                        value={nuevaTransaccion.tipoPago2}
+                        onChange={handleChange}
+                      >
+                        <option value="">Selecciona</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="debito">Débito</option>
+                        <option value="credito">Crédito</option>
+                        <option value="contribucion tarjeta de credito">Contribución Tarjeta de Crédito</option>
+                      </select>
+                    </div>
 
-                  <div className="campo-monto">
-                    <label htmlFor="monto2">Monto 2</label>
+                    <div className="campo-monto">
+                      <label htmlFor="monto2">Monto 2</label>
+                      <input
+                        type="text"
+                        name="monto2"
+                        id="monto2"
+                        value={nuevaTransaccion.monto2}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Mostrar campos de crédito si alguno de los métodos es "credito" */}
+              {(nuevaTransaccion.tipoPago === "credito" || nuevaTransaccion.tipoPago2 === "credito") && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem", marginTop: "1rem" }}>
+                  <div>
+                    <label>Cuotas:</label>
                     <input
-                      type="text"
-                      name="monto2"
-                      id="monto2"
-                      value={nuevaTransaccion.monto2}
-                      onChange={handleChange}
+                      type="number"
+                      name="cuotas"
+                      min="1"
+                      value={nuevaTransaccion.cuotas}
+                      onChange={handleModalChange}
                     />
                   </div>
-                </>
+
+                  <div>
+                    <label>Interés (%):</label>
+                    <input
+                      type="number"
+                      name="interes"
+                      step="0.1"
+                      value={nuevaTransaccion.interes}
+                      onChange={handleModalChange}
+                    />
+                  </div>
+
+                  <div>
+                    <label>Total Crédito:</label>
+                    <input
+                      type="text"
+                      name="totalCredito"
+                      value={nuevaTransaccion.totalCredito}
+                      readOnly
+                    />
+                  </div>
+
+                  <div>
+                    <label>Valor por Cuota:</label>
+                    <input
+                      type="text"
+                      name="valorCuota"
+                      value={nuevaTransaccion.valorCuota}
+                      readOnly
+                    />
+                  </div>
+                </div>
               )}
-              </div>
             </div>
 
             <div className="acciones-transaccion">

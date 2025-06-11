@@ -161,6 +161,20 @@
   filter: brightness(0.95);
 }
 
+.fila-inactiva {
+  opacity: 0.5;
+}
+
+.fila-activa {
+  opacity: 1;
+}
+
+.meta-inactiva {
+  opacity: 0.5;
+  color: #555;
+}
+
+
 @media (max-width: 768px) {
 
   .metas-ahorro-container {
