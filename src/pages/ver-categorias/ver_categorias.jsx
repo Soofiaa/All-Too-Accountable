@@ -80,14 +80,19 @@ const Categorias = () => {
 
   const handleEditar = (index) => {
     const categoria = categorias[index];
+    const tipoCapitalizado = categoria.tipo.charAt(0).toUpperCase() + categoria.tipo.slice(1);
+
     setNuevaCategoria({
       nombre: categoria.nombre,
-      tipo: categoria.tipo,
-      monto_limite: categoria.monto_limite ? categoria.monto_limite.toLocaleString("es-CL") : ""
+      tipo: tipoCapitalizado,
+      monto_limite: categoria.monto_limite
+        ? categoria.monto_limite.toLocaleString("es-CL")
+        : ""
     });
+
     setCategoriaEditando(index);
     setMostrarModalAgregar(true);
-  };  
+  }; 
 
   
   const handleAceptar = async () => {
@@ -166,7 +171,9 @@ const Categorias = () => {
           return;
         }
 
-        const nuevaCategoriaConEditable = { ...nueva, editable: true };
+        const creada = await respuesta.json();
+        setCategorias(prev => [...prev, { ...creada, editable: true }]);
+
         setCategorias(prev => [...prev, nuevaCategoriaConEditable]);
 
       } catch (error) {

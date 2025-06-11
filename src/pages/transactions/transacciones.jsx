@@ -220,7 +220,8 @@ export default function Transacciones() {
 
 
   useEffect(() => {
-    if (!usarSegundoMetodoEditar) return;
+    // Evitar recalcular monto 1 si estamos editando
+    if (!usarSegundoMetodo || usarSegundoMetodoEditar) return;
 
     const monto1 = parseFloat((nuevaTransaccion.monto || "0").toString().replace(/\./g, "").replace(",", ".")) || 0;
     const monto2 = parseFloat((nuevaTransaccion.monto2 || "0").toString().replace(/\./g, "").replace(",", ".")) || 0;
@@ -230,7 +231,7 @@ export default function Transacciones() {
       ...prev,
       monto: formatearConPuntos(suma.toFixed(0))
     }));
-  }, [nuevaTransaccion.monto2, usarSegundoMetodoEditar]);
+  }, [nuevaTransaccion.monto2, usarSegundoMetodo]);
 
 
   const scrollToForm = () => {
@@ -527,7 +528,7 @@ export default function Transacciones() {
     setNuevaTransaccion({
       id_transaccion: trans.id_transaccion,
       fecha: trans.fecha,
-      monto: trans.monto,
+      monto: trans.monto ? Number(trans.monto).toLocaleString("es-CL") : "",
       descripcion: trans.descripcion || "",
       id_categoria: trans.id_categoria || "",
       tipoPago: trans.tipoPago || "",
@@ -538,7 +539,7 @@ export default function Transacciones() {
       totalCredito: trans.totalCredito || "",
       interes: trans.interes || "",
       tipoPago2: trans.tipoPago2 || "",
-      monto2: trans.monto2 || "",
+      monto2: trans.monto2 ? Number(trans.monto2).toLocaleString("es-CL") : "",
       id_gasto_mensual: trans.id_gasto_mensual || null,
       id_gasto_programado: trans.id_gasto_programado || null,
     });
@@ -1107,7 +1108,19 @@ export default function Transacciones() {
                         </div>
                       </div>
                       <div className="item"><span>Descripción:</span><div>{t.descripcion}</div></div>
-                      <div className="item"><span>Tipo de pago:</span><div>{t.tipoPago}</div></div>
+                      <div className="item">
+                        <span>Tipo de pago:</span>
+                        <div>
+                          {t.tipoPago2 && t.monto2
+                            ? <>
+                                {t.tipoPago} (${Number(t.monto).toLocaleString("es-CL")})
+                                {" + "}
+                                {t.tipoPago2} (${Number(t.monto2).toLocaleString("es-CL")})
+                              </>
+                            : t.tipoPago
+                          }
+                        </div>
+                      </div>
                     </div>
 
                     {t.imagen && (

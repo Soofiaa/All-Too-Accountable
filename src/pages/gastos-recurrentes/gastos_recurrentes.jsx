@@ -233,7 +233,7 @@ const PagosRecurrentes = () => {
               id_categoria: nuevoPago.id_categoria,
               monto: parseFloat(nuevoPago.monto),
               dia_pago: parseInt(nuevoPago.dia_pago),
-              idUsuario: idUsuario
+              id_usuario: idUsuario
             })
           });
         } else {
@@ -253,7 +253,7 @@ const PagosRecurrentes = () => {
         }
       } else {
         if (tipoNuevoPago === "mensual") {
-          const respuesta = await fetch(`${API_URL}/gastos_mensuales`, {
+          await fetch(`${API_URL}/gastos_mensuales`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -265,24 +265,6 @@ const PagosRecurrentes = () => {
               idUsuario: idUsuario
             })
           });
-
-          const data = await respuesta.json();
-
-          // Si el gasto fue creado con éxito, insertar su transacción
-          if (respuesta.ok && data.id_gasto) {
-            try {
-              const insertar = await fetch(`${API_URL}/gastos_mensuales/insertar_transaccion/${data.id_gasto}`, {
-                method: "POST"
-              });
-
-              if (!insertar.ok) {
-                const errorTexto = await insertar.text();
-                console.warn("No se insertó transacción automáticamente:", errorTexto);
-              }
-            } catch (error) {
-              console.error("Error al insertar transacción:", error);
-            }
-          }
         } else {
           await fetch(`${API_URL}/pagos_programados`, {
             method: "POST",
@@ -415,7 +397,7 @@ const PagosRecurrentes = () => {
                           e.stopPropagation();
                           setMensajeModal("¿Deseas desactivar este gasto mensual?");
                           setAccionModal(() => async () => {
-                            await fetch(`${API_URL}/gastos_mensuales/desactivar/${pago.id}?idUsuario=${idUsuario}`, {
+                            await fetch(`${API_URL}/gastos_mensuales/desactivar/${pago.id}?id_usuario=${idUsuario}`, {
                               method: "PUT"
                             });
                             window.location.reload();
@@ -476,7 +458,7 @@ const PagosRecurrentes = () => {
                           onClick={() => {
                             setMensajeModal("¿Recuperar este gasto mensual?");
                             setAccionModal(() => async () => {
-                              await fetch(`${API_URL}/gastos_mensuales/reactivar/${gasto.id_gasto}?idUsuario=${idUsuario}`, {
+                              await fetch(`${API_URL}/gastos_mensuales/reactivar/${gasto.id_gasto}?id_usuario=${idUsuario}`, {
                                 method: "PUT"
                               });
                               window.location.reload();

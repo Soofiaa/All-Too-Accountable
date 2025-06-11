@@ -74,7 +74,6 @@ export default function DashboardFinanciero() {
   const [mes2, setMes2] = useState(now.getMonth() + 1);
   const [anio2, setAnio2] = useState(now.getFullYear());
   const id_usuario = getIdUsuario();
-  const [historialSalario, setHistorialSalario] = useState([]);
   const [historialSalarios, setHistorialSalarios] = useState([]);
   const [salarioEditando, setSalarioEditando] = useState(null);
   const [nuevoSalarioEditado, setNuevoSalarioEditado] = useState("");
@@ -98,16 +97,6 @@ export default function DashboardFinanciero() {
       .then(data => setComparacion(data))
       .catch(err => console.error("Error al comparar categorías:", err));
   }, [mes1, anio1, mes2, anio2]);
-
-
-  useEffect(() => {
-    if (!id_usuario) return;
-
-    fetch(`${API_URL}/historial_salarios/${id_usuario}`)
-      .then(res => res.json())
-      .then(data => setHistorialSalario(data))
-      .catch(err => console.error("Error al cargar historial salarial:", err));
-  }, []);
 
   
   useEffect(() => {
